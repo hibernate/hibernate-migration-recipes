@@ -1,0 +1,3 @@
+= Hibernate ORM Migration Recipes
+
+https://docs.openrewrite.org[OpenRewrite] recipes for migrating versions of https://hibernate.org/orm[Hibernate ORM].
