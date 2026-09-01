@@ -10,40 +10,23 @@ repositories {
 }
 
 dependencies {
-    // import Rewrite's bill of materials.
-    implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
+    implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:3.37.0"))
 
-    // rewrite-java dependencies only necessary for Java Recipe development
     implementation("org.openrewrite:rewrite-java")
-
-    // You only need the version that corresponds to your current
-    // Java version. It is fine to add all of them, though, as
-    // they can coexist on a classpath.
-    runtimeOnly("org.openrewrite:rewrite-java-8")
-    runtimeOnly("org.openrewrite:rewrite-java-11")
-    runtimeOnly("org.openrewrite:rewrite-java-17")
-
-    // rewrite-maven dependency only necessary for Maven Recipe development
-    implementation("org.openrewrite:rewrite-maven")
-
-    // rewrite-yaml dependency only necessary for Yaml Recipe development
-    implementation("org.openrewrite:rewrite-yaml")
-
-    // rewrite-properties dependency only necessary for Properties Recipe development
-    implementation("org.openrewrite:rewrite-properties")
-
-    // rewrite-xml dependency only necessary for XML Recipe development
     implementation("org.openrewrite:rewrite-xml")
 
-    // lombok is optional, but recommended for authoring recipes
-    compileOnly("org.projectlombok:lombok:latest.release")
-    annotationProcessor("org.projectlombok:lombok:latest.release")
-
-    // For authoring tests for any kind of Recipe
     testImplementation("org.openrewrite:rewrite-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api:latest.release")
     testImplementation("org.junit.jupiter:junit-jupiter-params:latest.release")
+    testImplementation("jakarta.persistence:jakarta.persistence-api:3.2.0")
+
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:latest.release")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:latest.release")
+    testRuntimeOnly("org.openrewrite:rewrite-java-21")
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform()
 }
 
 tasks.named<JavaCompile>("compileJava") {
