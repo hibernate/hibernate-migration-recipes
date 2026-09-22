@@ -2,7 +2,7 @@ plugins {
     id("java")
 }
 
-group = "org.hibernate.orm"
+group = "org.hibernate.migration"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -22,7 +22,18 @@ dependencies {
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:latest.release")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:latest.release")
-    testRuntimeOnly("org.openrewrite:rewrite-java-21")
+    // OpenRewrite selects the right parser at runtime based on the JDK running the build.
+    // rewrite-java-25 exists but is not published to Maven Central; it requires an authenticated
+    // Moderne repository: https://quarkusio.zulipchat.com/#narrow/channel/187038-dev/topic/Moderne.20Source.20Available.20License/near/625964139
+    runtimeOnly("org.openrewrite:rewrite-java-17")
+    runtimeOnly("org.openrewrite:rewrite-java-21")
+}
+
+// JDK 21 max: rewrite-java-25 is not on Maven Central (see above).
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 tasks.named<Test>("test") {
