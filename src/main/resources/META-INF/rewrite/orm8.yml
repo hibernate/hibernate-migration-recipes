@@ -1,0 +1,10 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.hibernate.migration.recipes.MigrateHibernateOrm7To8
+displayName: Migrate from Hibernate ORM 7.x to 8.0
+description: >-
+  Migrates Hibernate ORM 7.x usage to ORM 8.0.
+  Currently wraps the JPA 3.x to 4.0 migration recipe;
+  additional ORM-specific migrations will be added here.
+recipeList:
+  - org.hibernate.migration.recipes.MigrateJpa3To4
