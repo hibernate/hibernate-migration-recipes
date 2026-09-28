@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright Red Hat Inc. and Hibernate Authors
  */
-package org.hibernate.migration.recipes;
+package org.hibernate.migration.recipes.jpa4;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
@@ -12,10 +12,13 @@ import org.openrewrite.test.RewriteTest;
 
 import static org.openrewrite.java.Assertions.java;
 
+/// Regression coverage for the migration recipe.
+/// @author Steve Ebersole
 class MigrateMapKeyNameToValueTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
+        ApiValidation.verifyBaseline(spec);
         spec
                 .recipe(new MigrateMapKeyNameToValue())
                 .parser(JavaParser.fromJavaVersion()
@@ -71,7 +74,7 @@ class MigrateMapKeyNameToValueTest implements RewriteTest {
 
     @Test
     void mapKeyValueAttributeAlreadyCorrectIsNotChanged() {
-        rewriteRun(
+        rewriteRun(spec -> spec.parser(ApiValidation.parser(ApiValidation.environments().primary().target())),
           //language=java
           java(
             """
@@ -89,7 +92,7 @@ class MigrateMapKeyNameToValueTest implements RewriteTest {
 
     @Test
     void mapKeyShorthandAlreadyCorrectIsNotChanged() {
-        rewriteRun(
+        rewriteRun(spec -> spec.parser(ApiValidation.parser(ApiValidation.environments().primary().target())),
           //language=java
           java(
             """

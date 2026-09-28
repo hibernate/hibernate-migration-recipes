@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright Red Hat Inc. and Hibernate Authors
  */
-package org.hibernate.migration.recipes;
+package org.hibernate.migration.recipes.jpa4;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.java.JavaParser;
@@ -12,12 +12,15 @@ import org.openrewrite.test.RewriteTest;
 import static org.openrewrite.java.Assertions.java;
 import static org.openrewrite.xml.Assertions.xml;
 
+/// Regression coverage for the migration recipe.
+/// @author Steve Ebersole
 class MigrateJpa3To4Test implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
+        ApiValidation.verifyBaseline(spec);
         spec
-                .recipeFromResources("org.hibernate.migration.recipes.MigrateJpa3To4")
+                .recipeFromResources("org.hibernate.migration.recipes.jpa4")
                 .parser(JavaParser.fromJavaVersion()
                         .logCompilationWarningsAndErrors(true)
                         .classpath("jakarta.persistence-api"));
@@ -56,7 +59,7 @@ class MigrateJpa3To4Test implements RewriteTest {
                             @Id Long id;
 
                             void clean(EntityManager em) {
-                                Object delegate = em.unwrap(Object.class);
+                                Object delegate = em.unwrap(java.lang.Object.class);
                             }
                         }
                         """

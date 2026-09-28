@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright Red Hat Inc. and Hibernate Authors
  */
-package org.hibernate.migration.recipes;
+package org.hibernate.migration.recipes.jpa4;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,6 +14,8 @@ import org.openrewrite.test.RewriteTest;
 
 import static org.openrewrite.java.Assertions.java;
 
+/// Regression coverage for the migration recipe.
+/// @author Steve Ebersole
 class MigrateTemporalAnnotationTest implements RewriteTest {
 
     @Override

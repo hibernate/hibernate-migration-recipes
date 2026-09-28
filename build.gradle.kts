@@ -1,45 +1,67 @@
 plugins {
     id("java")
+    id("org.hibernate.migration-testing")
 }
 
 group = "org.hibernate.migration"
 version = "1.0-SNAPSHOT"
+repositories { mavenCentral() }
 
-repositories {
-    mavenCentral()
-}
+val rewriteBomVersion = "3.37.0"
+val junitVersion = "6.1.3"
 
 dependencies {
-    implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:3.37.0"))
-
+    implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:$rewriteBomVersion"))
     implementation("org.openrewrite:rewrite-java")
     implementation("org.openrewrite:rewrite-xml")
-
-    testImplementation("org.openrewrite:rewrite-test")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:latest.release")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:latest.release")
-    testImplementation("jakarta.persistence:jakarta.persistence-api:3.2.0")
-
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:latest.release")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:latest.release")
-    // OpenRewrite selects the right parser at runtime based on the JDK running the build.
-    // rewrite-java-25 exists but is not published to Maven Central; it requires an authenticated
-    // Moderne repository: https://quarkusio.zulipchat.com/#narrow/channel/187038-dev/topic/Moderne.20Source.20Available.20License/near/625964139
     runtimeOnly("org.openrewrite:rewrite-java-17")
     runtimeOnly("org.openrewrite:rewrite-java-21")
+    testImplementation("org.openrewrite:rewrite-test")
+    testImplementation(platform("org.junit:junit-bom:$junitVersion"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-// JDK 21 max: rewrite-java-25 is not on Maven Central (see above).
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+migrationTesting {
+    junitVersion.set("6.1.3")
+    environments {
+        register("orm74") {
+            ormVersion.set("7.4.11.Final")
+            javaVersion.set(21)
+        }
+        register("orm8") {
+            ormVersion.set("8.0.0.Beta3")
+            javaVersion.set(21)
+        }
+    }
+    migrations {
+        register("orm8") {
+            sourceEnvironment.set("orm74")
+            targetEnvironment.set("orm8")
+            databaseDependency.set("com.h2database:h2:2.4.240")
+        }
+    }
+    supplementaryApis {
+        register("jpa30") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.0.0") }
+        register("jpa31") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.1.0") }
+        register("jpa32") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.2.0") }
     }
 }
 
-tasks.named<Test>("test") {
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+tasks.named<JavaCompile>("compileJava") { options.release.set(8) }
+sourceSets.test {
+    java.srcDir("src/testSupport/java")
+    resources.srcDir("src/testSupport/resources")
+}
+tasks.test {
     useJUnitPlatform()
 }
 
-tasks.named<JavaCompile>("compileJava") {
-    options.release.set(8)
+val verifyBuildConvention = tasks.register<GradleBuild>("verifyBuildConvention") {
+    group = "verification"
+    buildName = "migration-testing-convention-tests"
+    dir = file("buildSrc")
+    tasks = listOf("test")
 }
+tasks.check { dependsOn(verifyBuildConvention) }

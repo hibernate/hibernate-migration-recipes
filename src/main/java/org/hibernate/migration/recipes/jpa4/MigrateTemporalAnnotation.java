@@ -1,9 +1,6 @@
-/*
- * SPDX-License-Identifier: Apache-2.0
- * Copyright Red Hat Inc. and Hibernate Authors
- */
-package org.hibernate.migration.recipes;
+package org.hibernate.migration.recipes.jpa4;
 
+import org.jspecify.annotations.NonNull;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
@@ -20,17 +17,17 @@ import org.openrewrite.java.tree.TypeUtils;
 
 import java.util.List;
 
-/**
- * Replaces deprecated {@code @Temporal} annotations with {@code java.time} field types.
- *
- * <p>{@code @Temporal} and {@code TemporalType} were deprecated in Jakarta Persistence 3.2
- * in favour of the date/time types defined in {@link java.time}. The mapping is:
- * <ul>
- *   <li>{@code @Temporal(DATE)}      + {@code Date}/{@code Calendar} &rarr; {@code LocalDate}</li>
- *   <li>{@code @Temporal(TIME)}      + {@code Date}/{@code Calendar} &rarr; {@code LocalTime}</li>
- *   <li>{@code @Temporal(TIMESTAMP)} + {@code Date}/{@code Calendar} &rarr; {@code LocalDateTime}</li>
- * </ul>
- */
+/// Replaces deprecated `@Temporal` annotations with `java.time` field types.
+///
+/// `@Temporal` and `TemporalType` were deprecated in Jakarta Persistence 3.2
+/// in favor of the date/time types defined in [java.time]. The mapping is:
+///
+///   - `@Temporal(DATE)`      + `Date`/`Calendar` → `LocalDate`
+///   - `@Temporal(TIME)`      + `Date`/`Calendar` → `LocalTime`
+///   - `@Temporal(TIMESTAMP)` + `Date`/`Calendar` → `LocalDateTime`
+///
+/// @author Jennifer Joby
+/// @author Steve Ebersole
 public class MigrateTemporalAnnotation extends Recipe {
 
     private static final String TEMPORAL_FQN      = "jakarta.persistence.Temporal";
@@ -39,26 +36,27 @@ public class MigrateTemporalAnnotation extends Recipe {
     private static final String CALENDAR_FQN      = "java.util.Calendar";
 
     @Override
-    public String getDisplayName() {
+    public @NonNull String getDisplayName() {
         return "Replace @Temporal with java.time field types";
     }
 
     @Override
-    public String getDescription() {
+    public @NonNull String getDescription() {
         return "Replaces the deprecated @Temporal annotation (deprecated in Jakarta Persistence 3.2) "
                 + "by changing the field or property type to the appropriate java.time type: "
                 + "DATE -> LocalDate, TIME -> LocalTime, TIMESTAMP -> LocalDateTime.";
     }
 
     @Override
-    public TreeVisitor<?, ExecutionContext> getVisitor() {
+    public @NonNull TreeVisitor<?, ExecutionContext> getVisitor() {
         return Preconditions.check(
                 new UsesType<>(TEMPORAL_FQN, false),
                 new JavaIsoVisitor<ExecutionContext>() {
 
                     @Override
-                    public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable,
-                                                                            ExecutionContext ctx) {
+                    public J.@NonNull VariableDeclarations visitVariableDeclarations(
+							J.@NonNull VariableDeclarations multiVariable,
+							@NonNull ExecutionContext ctx) {
                         J.VariableDeclarations mv = super.visitVariableDeclarations(multiVariable, ctx);
 
                         J.Annotation temporal = findTemporalAnnotation(mv.getLeadingAnnotations());
