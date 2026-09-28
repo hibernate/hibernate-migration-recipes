@@ -1,3 +1,95 @@
 = Hibernate ORM Migration Recipes
 
 https://docs.openrewrite.org[OpenRewrite] recipes for migrating versions of https://hibernate.org/orm[Hibernate ORM].
+== Selecting recipes
+
+Select the recipe identifier, not the YAML filename. This unreleased project uses these groupings:
+
+* `org.hibernate.migration.recipes.jpa4`: JPA 3.x to 4.0 for Hibernate applications.
+* `org.hibernate.migration.recipes.orm8`: ORM 7.4 to 8.0; currently delegates to the JPA grouping.
+
+Individual recipes live in `org.hibernate.migration.recipes.jpa4`:
+
+* `MigrateNamedQueryToStatement`
+* `UpdatePersistenceXmlVersion`
+* `MigrateEntityManagerGetDelegate`
+* `MigrateMapKeyNameToValue`
+
+For example, select `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue` to run only that conversion. The previous package and grouping names have been replaced; there are no compatibility aliases.
+
+These recipes do not upgrade dependency coordinates. Java matching requires the application's source JPA API on the parser classpath. Target API versions below describe our validation baseline, not configurable recipe options.
+
+== Deferred and unsupported cases
+
+Neither grouping runs `MigrateTemporalAnnotation`. That recipe remains separately selectable as `org.hibernate.migration.recipes.jpa4.MigrateTemporalAnnotation`, with its existing behavior. Its general type replacement can affect unrelated Date/Calendar usages in the same file, break initializers/accessors, and change timezone semantics. It has not been hardened; redesign is deferred.
+
+Named-query conversion supports literal UPDATE, DELETE, and INSERT operations and preserves query text. Constants, concatenations, CTEs, leading query comments, explicit incompatible annotation members, and conflicting target containers require review. Native statements with result clauses or unsupported quoting/multiple statements remain unchanged. This is a bounded lexical check, not validation of arbitrary HQL or SQL.
+
+MapKey annotations specifying both name and value remain unchanged, even when equal. XML descriptors with unsupported namespaces, versions, or schema declarations remain unchanged. Delegate conversion targets attributed EntityManager calls and emits `unwrap(java.lang.Object.class)`; independently declared overrides, method references, and name-resolution conflicts require review.
+
+== Reviewing skipped migrations
+
+Skipped recognized candidates appear in the OpenRewrite data table `org.hibernate.migration.recipes.table.SkippedMigrations`, with the leaf recipe, source path, original line/column, subject, stable reason code, and explanation. Source comments or markers are not added.
+
+For an application already configured with the OpenRewrite Gradle plugin and this recipe JAR on its rewrite classpath:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe("org.hibernate.migration.recipes.jpa4")
+    exportDatatables = true
+}
+----
+
+The https://docs.openrewrite.org/reference/gradle-plugin-configuration[Gradle plugin documentation] describes data-table export to `build/reports/rewrite/datatables/<timestamp>`. Review this report alongside the generated changes. A skipped candidate is not a successful migration.
+
+== Building and verifying
+
+Run `./gradlew check` with an installed JDK 21 toolchain. Production bytecode retains its Java 8 release target. All recipes, shared production helpers, and YAML resources stay in `main` and ship in one JAR.
+
+Verification entry points:
+
+* `test`: environment-independent fixture-infrastructure checks.
+* `conversionTestOrm8`: source compilation/parsing, ORM 8 recipe-JAR discovery and regression checks, actual-output target compilation, and fresh-target idempotence.
+* `generateConvertedFixturesOrm8`: generates the complete integration fixture set, independently of JUnit test selection.
+* `conversionIntegrationTestOrm8`: compiles and executes each actual emitted variant against Hibernate ORM 8 and H2; runs its generator automatically.
+* `check`: all of the above validation, environment checks, and the local build-convention tests.
+
+For example, `./gradlew conversionTestOrm8 --tests '*MigrateMapKeyNameToValueTest'` runs a focused recipe test. `test` alone no longer runs the recipe migration suites. Filtered source tests never publish partial integration fixtures.
+
+== Version environments
+
+The `migrationTesting` convention in `buildSrc` registers two ordinary test SourceSets per migration destination. The root build declares the reusable ORM environments and migration path:
+
+[source,kotlin]
+----
+migrationTesting {
+    environments {
+        register("orm74") {
+            ormVersion.set("7.4.11.Final")
+            javaVersion.set(21)
+        }
+        register("orm8") {
+            ormVersion.set("8.0.0.Beta3")
+            javaVersion.set(21)
+        }
+    }
+    migrations {
+        register("orm8") {
+            sourceEnvironment.set("orm74")
+            targetEnvironment.set("orm8")
+            databaseDependency.set("com.h2database:h2:2.4.240")
+        }
+    }
+}
+----
+
+JPA follows each published ORM release's dependencies: the current source resolves 3.2.0 and target resolves 4.0.0-M7. The build checks those identities against ORM's requested dependencies and the actual test classpaths. Source and target dependency configurations remain isolated. A future migration can reuse `orm8` as its source; no ORM 9 suite or version is declared yet. Mixed source/target JDK pairs are explicitly unsupported until separately implemented.
+
+The three standalone JPA 3.0/3.1/3.2 classpaths remain supplementary regression coverage, not additional Hibernate migration paths. They do not replace JPA on an ORM environment's classpath. XML schemas come from the target ORM JAR under `org/hibernate/jpa/`.
+
+Shared test utilities are compiled from `src/testSupport` into the test suites that need them and stay out of the production JAR. Migration-specific tests reside under `src/conversionTestOrm8` and `src/conversionIntegrationTestOrm8`.
+
+Integration fixture declarations are in `src/testSupport/resources/orm8-fixtures.properties`. The generator writes each input variant under `build/converted-fixtures/orm8/<variant>/<fixture>/sources` and publishes a deterministic manifest last. The consumer checks expected entries, dependency coordinates, file paths, and content hashes, then loads each variant separately. Missing, extra, corrupt, or incomplete outputs fail verification. Generated fixtures are never hand-written expected output.
+
+Pinned tooling: Gradle 9.6.0, Rewrite BOM 3.37.0 (Rewrite 8.89.0), JUnit 6.1.3, JDK 21, and H2 2.4.240. Dependency versions are declared explicitly or aligned through BOMs; environment checks verify the resolved ORM and JPA versions. Published ORM artifacts come from Maven Central; no local ORM build or publication is required.

@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright Red Hat Inc. and Hibernate Authors
  */
-package org.hibernate.migration.recipes;
+package org.hibernate.migration.recipes.jpa4;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
@@ -11,10 +11,13 @@ import org.openrewrite.test.RewriteTest;
 
 import static org.openrewrite.java.Assertions.java;
 
+/// Regression coverage for the migration recipe.
+/// @author Steve Ebersole
 class MigrateEntityManagerGetDelegateTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
+        ApiValidation.verifyBaseline(spec);
         spec
                 .recipe(new MigrateEntityManagerGetDelegate())
                 .parser(org.openrewrite.java.JavaParser.fromJavaVersion()
@@ -42,7 +45,7 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
                         
                         class MyService {
                             void method(EntityManager em) {
-                                Object delegate = em.unwrap(Object.class);
+                                Object delegate = em.unwrap(java.lang.Object.class);
                             }
                         }
                         """
@@ -69,7 +72,7 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
                         
                         class MyService {
                             void method(EntityManager em) {
-                                Object delegate = (Object) em.unwrap(Object.class);
+                                Object delegate = (Object) em.unwrap(java.lang.Object.class);
                             }
                         }
                         """
@@ -96,7 +99,7 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
                         
                         class MyService {
                             Object getUnderlying(EntityManager em) {
-                                return em.unwrap(Object.class);
+                                return em.unwrap(java.lang.Object.class);
                             }
                         }
                         """

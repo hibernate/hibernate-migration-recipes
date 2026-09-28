@@ -1,0 +1,60 @@
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.testfixtures.ProjectBuilder
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+import java.nio.file.Files
+
+class MigrationTestingPluginTest {
+    private fun project(): ProjectInternal = (ProjectBuilder.builder().withProjectDir(Files.createTempDirectory("migration-build-test").toFile()).build() as ProjectInternal).also {
+        it.pluginManager.apply(MigrationTestingPlugin::class.java)
+    }
+    private fun configure(p: ProjectInternal, mixedJdk: Boolean = false) {
+        val model = p.extensions.getByType(MigrationTestingExtension::class.java)
+        listOf("old", "middle", "next").forEach { id ->
+            model.environments.create(id).apply {
+                ormVersion.set("1.0.0.Final")
+                javaVersion.set(if (mixedJdk && id == "next") 25 else 21)
+            }
+        }
+        model.migrations.create("orm8").apply {
+            sourceEnvironment.set("old"); targetEnvironment.set("middle"); databaseDependency.set("example:database:1")
+        }
+        model.migrations.create("orm9").apply {
+            sourceEnvironment.set("middle"); targetEnvironment.set("next"); databaseDependency.set("example:database:1")
+        }
+    }
+    @Test fun `two migrations reuse an environment without resolving dependencies`() {
+        val p = project(); configure(p); p.evaluate()
+        assertFalse(p.state.failure != null, p.state.failure?.toString())
+        val sets = p.extensions.getByType(JavaPluginExtension::class.java).sourceSets
+        assertEquals(setOf("main", "test", "conversionTestOrm8", "conversionIntegrationTestOrm8", "conversionTestOrm9", "conversionIntegrationTestOrm9"), sets.names)
+        assertEquals(6, p.configurations.count { it.name.startsWith("ormEnvironment") })
+        for (id in listOf("Orm8", "Orm9")) {
+            val integration = p.tasks.getByName("conversionIntegrationTest$id")
+            assertTrue(integration.taskDependencies.getDependencies(integration).any { it.name == "generateConvertedFixtures$id" })
+            val generator = p.tasks.getByName("generateConvertedFixtures$id")
+            assertFalse(generator.taskDependencies.getDependencies(generator).any { it is org.gradle.api.tasks.testing.Test })
+        }
+        assertTrue(p.configurations.getByName("conversionIntegrationTestOrm8Implementation").extendsFrom.isEmpty())
+    }
+    @Test fun `unknown environment fails without resolution`() {
+        val p = project(); configure(p)
+        p.extensions.getByType(MigrationTestingExtension::class.java).migrations.getByName("orm8").sourceEnvironment.set("missing")
+        val failure = assertThrows(org.gradle.api.ProjectConfigurationException::class.java) { p.evaluate() }
+        assertTrue(failure.cause.toString().contains("Unknown source environment"), failure.toString())
+    }
+    @Test fun `mixed JDKs are explicitly rejected`() {
+        val p = project(); configure(p, true)
+        val failure = assertThrows(org.gradle.api.ProjectConfigurationException::class.java) { p.evaluate() }
+        assertTrue(failure.cause.toString().contains("Unsupported toolchain pair"), failure.toString())
+    }
+    @Test fun `task collisions are rejected`() {
+        val p = project(); configure(p); p.tasks.register("conversionIntegrationTestOrm8")
+        val failure = assertThrows(org.gradle.api.ProjectConfigurationException::class.java) { p.evaluate() }
+        assertTrue(failure.cause.toString().contains("already exists"), failure.toString())
+    }
+    @Test fun `ambiguous identifiers are rejected`() {
+        assertThrows(IllegalArgumentException::class.java) { MigrationTestingPlugin.suffix("orm-8") }
+    }
+}

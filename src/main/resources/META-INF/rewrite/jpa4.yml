@@ -1,6 +1,6 @@
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: org.hibernate.migration.recipes.MigrateJpa3To4
+name: org.hibernate.migration.recipes.jpa4
 displayName: Migrate from JPA 3.x to JPA 4.0
 description: >-
   Migrates Jakarta Persistence 3.x usage to JPA 4.0.
@@ -8,11 +8,9 @@ description: >-
   @NamedNativeQuery to @NamedNativeStatement,
   updates persistence.xml schema references,
   replaces EntityManager.getDelegate() with unwrap(Object.class),
-  replaces @Temporal with java.time field types,
   and renames the deprecated @MapKey(name=...) attribute to value.
 recipeList:
-  - org.hibernate.migration.recipes.MigrateNamedQueryToStatement
-  - org.hibernate.migration.recipes.UpdatePersistenceXmlVersion
-  - org.hibernate.migration.recipes.MigrateEntityManagerGetDelegate
-  - org.hibernate.migration.recipes.MigrateTemporalAnnotation
-  - org.hibernate.migration.recipes.MigrateMapKeyNameToValue
+  - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
+  - org.hibernate.migration.recipes.jpa4.UpdatePersistenceXmlVersion
+  - org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate
+  - org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue

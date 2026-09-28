@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright Red Hat Inc. and Hibernate Authors
  */
-package org.hibernate.migration.recipes;
+package org.hibernate.migration.recipes.jpa4;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
@@ -11,6 +11,8 @@ import org.openrewrite.test.RewriteTest;
 
 import static org.openrewrite.xml.Assertions.xml;
 
+/// Regression coverage for the migration recipe.
+/// @author Steve Ebersole
 class UpdatePersistenceXmlVersionTest implements RewriteTest {
 
     @Override
@@ -99,26 +101,7 @@ class UpdatePersistenceXmlVersionTest implements RewriteTest {
     }
 
     @Test
-    void updateVersionOnlyAttribute() {
-        rewriteRun(
-                xml(
-                        //language=xml
-                        """
-                        <?xml version="1.0" encoding="UTF-8"?>
-                        <persistence version="3.0">
-                            <persistence-unit name="my-unit">
-                            </persistence-unit>
-                        </persistence>
-                        """,
-                        //language=xml
-                        """
-                        <?xml version="1.0" encoding="UTF-8"?>
-                        <persistence version="4.0">
-                            <persistence-unit name="my-unit">
-                            </persistence-unit>
-                        </persistence>
-                        """
-                )
-        );
+    void versionOnlyWithoutNamespaceIsUnchanged() {
+        rewriteRun(xml("<persistence version=\"3.0\"><persistence-unit name=\"my-unit\"/></persistence>"));
     }
 }

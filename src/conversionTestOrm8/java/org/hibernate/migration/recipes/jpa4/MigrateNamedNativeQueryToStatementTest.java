@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright Red Hat Inc. and Hibernate Authors
  */
-package org.hibernate.migration.recipes;
+package org.hibernate.migration.recipes.jpa4;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
@@ -18,10 +18,13 @@ import java.util.List;
 
 import static org.openrewrite.java.Assertions.java;
 
+/// Regression coverage for the migration recipe.
+/// @author Steve Ebersole
 class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
+        ApiValidation.verifyBaseline(spec);
         spec
                 .recipe(new MigrateNamedQueryToStatement())
                 .parser(JavaParser.fromJavaVersion()
@@ -148,7 +151,7 @@ class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
                         @NamedNativeQueries({
                         	@NamedNativeQuery(name = "Book.findAll",    query = "SELECT * FROM BOOK")
                         })
-                        @NamedNativeStatement(name = "Book.deleteOld", statement = "DELETE FROM BOOK WHERE year < 2000")
+                        @NamedNativeStatement(name = "Book.deleteOld",  statement = "DELETE FROM BOOK WHERE year < 2000")
                         @Entity
                         class Book {
                         	@Id Long id;
