@@ -205,7 +205,7 @@ class HardeningTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"org.hibernate.migration.recipes.jpa4", "org.hibernate.migration.recipes.orm8"})
+    @ValueSource(strings = {"org.hibernate.migration.recipes.jpa4", "org.hibernate.migration.recipes.orm80"})
     void compositesKeepTemporalAndUnrelatedCode(String name) {
         String temporal = """
                     @Temporal(DATE) java.util.Date date = new java.util.Date();
@@ -258,6 +258,73 @@ class HardeningTest {
         var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), source, "jpa32");
         assertEquals(source, result.text());
         assertEquals(List.of("UNSUPPORTED_METHOD_OVERRIDE", "NAME_RESOLUTION_CONFLICT"), result.skipped().stream().map(r -> r.getReasonCode()).toList());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
+    void namedQueryTypeParameterConflicts(String api) {
+        String source = """
+                import jakarta.persistence.NamedQuery;
+                import jakarta.persistence.NamedNativeQuery;
+                @NamedQuery(name="update", query="update Thing set id=1")
+                class Example<NamedStatement> {}
+                @NamedNativeQuery(name="nativeUpdate", query="update thing set id=1")
+                class NativeExample<NamedNativeStatement> {}
+                """;
+        var result = ApiValidation.run(new MigrateNamedQueryToStatement(), source, api);
+        assertTrue(result.text().contains("@jakarta.persistence.NamedStatement("));
+        assertTrue(result.text().contains("@jakarta.persistence.NamedNativeStatement("));
+        assertTrue(result.text().contains("class Example<NamedStatement>"));
+        assertTrue(result.text().contains("class NativeExample<NamedNativeStatement>"));
+        assertTrue(result.skipped().isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
+    void delegateTypeParameterConflicts(String api) {
+        String source = """
+                import jakarta.persistence.EntityManager;
+                class Example<java> {
+                    Object call(EntityManager em) { return em.getDelegate(); }
+                }
+                class MethodExample {
+                    <java> Object call(EntityManager em) { return em.getDelegate(); }
+                }
+                """;
+        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), source, api);
+        assertEquals(source, result.text());
+        assertEquals(List.of("NAME_RESOLUTION_CONFLICT", "NAME_RESOLUTION_CONFLICT"),
+                result.skipped().stream().map(r -> r.getReasonCode()).toList());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
+    void delegateInheritedMemberTypeConflictsAcrossFiles(String api) {
+        String base = "class Base { static class java {} }";
+        String source = """
+                import jakarta.persistence.EntityManager;
+                class Middle extends Base {}
+                class Example extends Middle {
+                    Object call(EntityManager em) { return em.getDelegate(); }
+                }
+                """;
+        String unrelated = """
+                import jakarta.persistence.EntityManager;
+                class Unrelated {
+                    Object call(EntityManager em) { return em.getDelegate(); }
+                }
+                """;
+        var sources = new java.util.LinkedHashMap<String, String>();
+        // The subtype precedes the member-type declaration to exercise scan-before-edit behavior.
+        sources.put("Example.java", source);
+        sources.put("Unrelated.java", unrelated);
+        sources.put("Base.java", base);
+        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sources, api);
+        assertEquals(source, result.files().get("Example.java"));
+        assertEquals(base, result.files().get("Base.java"));
+        assertTrue(result.files().get("Unrelated.java").contains("unwrap(java.lang.Object.class)"));
+        assertEquals(List.of("NAME_RESOLUTION_CONFLICT"),
+                result.skipped().stream().map(r -> r.getReasonCode()).toList());
     }
 
     @Test void explicitJpa32ResultClassIsAConflict() {

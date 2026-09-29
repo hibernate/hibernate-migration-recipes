@@ -1,6 +1,6 @@
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: org.hibernate.migration.recipes.orm8
+name: org.hibernate.migration.recipes.orm80
 displayName: Migrate from Hibernate ORM 7.4 to 8.0
 description: >-
   Migrates Hibernate ORM 7.4 usage to ORM 8.0.

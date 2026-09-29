@@ -33,9 +33,9 @@ open class OrmEnvironment @Inject constructor(private val id: String, objects: O
 /**
  * A conversion path between two named [OrmEnvironment] definitions.
  *
- * Its name determines the generated test SourceSet and task suffix: `orm8` produces
- * `conversionTestOrm8`, `generateConvertedFixturesOrm8`, and
- * `conversionIntegrationTestOrm8`. Source and target currently require the same JDK.
+ * Its name determines the generated test SourceSet and task suffix: `orm80` produces
+ * `conversionTestOrm80`, `generateConvertedFixturesOrm80`, and
+ * `conversionIntegrationTestOrm80`. Source and target currently require the same JDK.
  *
  * @author Steve Ebersole
  */

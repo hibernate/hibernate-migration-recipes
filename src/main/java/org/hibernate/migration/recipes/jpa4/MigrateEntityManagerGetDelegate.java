@@ -4,6 +4,7 @@ import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.jspecify.annotations.NonNull;
 import org.openrewrite.*;
 import org.openrewrite.java.JavaTemplate;
+import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.*;
 
 import java.util.*;
@@ -12,7 +13,7 @@ import java.util.*;
 ///
 /// @author Jennifer Joby
 /// @author Steve Ebersole
-public class MigrateEntityManagerGetDelegate extends Recipe {
+public class MigrateEntityManagerGetDelegate extends ScanningRecipe<Set<String>> {
 	private final transient SkippedMigrations skipped = new SkippedMigrations( this );
 
 	@Override
@@ -26,7 +27,27 @@ public class MigrateEntityManagerGetDelegate extends Recipe {
 	}
 
 	@Override
-	public @NonNull TreeVisitor<?, ExecutionContext> getVisitor() {
+	public Set<String> getInitialValue(ExecutionContext ctx) {
+        return new HashSet<>();
+    }
+
+    /// Collects owners of member types named java, including declarations in other source files.
+    @Override
+    public TreeVisitor<?, ExecutionContext> getScanner(Set<String> owners) {
+        return new JavaIsoVisitor<ExecutionContext>() {
+            @Override
+            public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration cd, ExecutionContext ctx) {
+                if ("java".equals(cd.getSimpleName()) && cd.getType() != null
+                        && cd.getType().getOwningClass() != null) {
+                    owners.add(cd.getType().getOwningClass().getFullyQualifiedName());
+                }
+                return super.visitClassDeclaration(cd, ctx);
+            }
+        };
+    }
+
+    @Override
+    public @NonNull TreeVisitor<?, ExecutionContext> getVisitor(Set<String> owners) {
 		return new MigrationSupport.JavaVisitor( this, skipped ) {
 			private final JavaTemplate argument = JavaTemplate.builder( "java.lang.Object.class" ).build();
 
@@ -117,6 +138,9 @@ public class MigrateEntityManagerGetDelegate extends Recipe {
 				for ( Cursor c = getCursor().getParent(); c != null; c = c.getParent() ) {
 					Object value = c.getValue();
 					if ( value instanceof J.MethodDeclaration ) {
+                        if (hasJavaTypeParameter(((J.MethodDeclaration) value).getTypeParameters())) {
+                            return true;
+                        }
                         for ( Statement p : ((J.MethodDeclaration) value).getParameters() ) {
                             if ( namedJava( p ) ) {
                                 return true;
@@ -130,13 +154,32 @@ public class MigrateEntityManagerGetDelegate extends Recipe {
                             }
                         }
 					}
-                    if ( value instanceof J.ClassDeclaration && "java".equals(
-                            ((J.ClassDeclaration) value).getSimpleName() ) ) {
-                        return true;
+                    if (value instanceof J.ClassDeclaration) {
+                        J.ClassDeclaration cd = (J.ClassDeclaration) value;
+                        if ("java".equals(cd.getSimpleName()) || hasJavaTypeParameter(cd.getTypeParameters())) {
+                            return true;
+                        }
+                        for (String owner : owners) {
+                            if (TypeUtils.isAssignableTo(owner, cd.getType())) {
+                                return true;
+                            }
+                        }
                     }
 				}
 				return false;
 			}
+
+            private boolean hasJavaTypeParameter(List<J.TypeParameter> parameters) {
+                if (parameters != null) {
+                    for (J.TypeParameter parameter : parameters) {
+                        if (parameter.getName() instanceof J.Identifier
+                                && "java".equals(((J.Identifier) parameter.getName()).getSimpleName())) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
 
 			private boolean namedJava(Statement statement) {
                 if ( statement instanceof J.ClassDeclaration ) {

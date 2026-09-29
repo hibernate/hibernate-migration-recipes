@@ -19,7 +19,7 @@ class RecipeArtifactTest {
         try (ZipFile jar = new ZipFile(path.toFile())) {
             var names = jar.stream().map( ZipEntry::getName ).toList();
             assertTrue(names.contains("META-INF/rewrite/jpa4.yml"));
-            assertTrue(names.contains("META-INF/rewrite/orm8.yml"));
+            assertTrue(names.contains("META-INF/rewrite/orm80.yml"));
             for (String name : names) {
                 assertFalse(name.contains("/testing/"), name);
                 assertFalse(name.contains("Test.class") || name.contains("Fixture") || name.contains("ApiValidation"), name);
@@ -46,7 +46,7 @@ class RecipeArtifactTest {
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
-            for (String name : List.of("jpa4", "orm8")) assertFalse(environment.activateRecipes("org.hibernate.migration.recipes." + name).getRecipeList().isEmpty());
+            for (String name : List.of("jpa4", "orm80")) assertFalse(environment.activateRecipes("org.hibernate.migration.recipes." + name).getRecipeList().isEmpty());
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateJpa3To4"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateHibernateOrm7To8"));
         }

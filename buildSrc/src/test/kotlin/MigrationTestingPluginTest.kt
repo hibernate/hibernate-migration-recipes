@@ -17,7 +17,7 @@ class MigrationTestingPluginTest {
                 javaVersion.set(if (mixedJdk && id == "next") 25 else 21)
             }
         }
-        model.migrations.create("orm8").apply {
+        model.migrations.create("orm80").apply {
             sourceEnvironment.set("old"); targetEnvironment.set("middle"); databaseDependency.set("example:database:1")
         }
         model.migrations.create("orm9").apply {
@@ -28,19 +28,19 @@ class MigrationTestingPluginTest {
         val p = project(); configure(p); p.evaluate()
         assertFalse(p.state.failure != null, p.state.failure?.toString())
         val sets = p.extensions.getByType(JavaPluginExtension::class.java).sourceSets
-        assertEquals(setOf("main", "test", "conversionTestOrm8", "conversionIntegrationTestOrm8", "conversionTestOrm9", "conversionIntegrationTestOrm9"), sets.names)
+        assertEquals(setOf("main", "test", "conversionTestOrm80", "conversionIntegrationTestOrm80", "conversionTestOrm9", "conversionIntegrationTestOrm9"), sets.names)
         assertEquals(6, p.configurations.count { it.name.startsWith("ormEnvironment") })
-        for (id in listOf("Orm8", "Orm9")) {
+        for (id in listOf("Orm80", "Orm9")) {
             val integration = p.tasks.getByName("conversionIntegrationTest$id")
             assertTrue(integration.taskDependencies.getDependencies(integration).any { it.name == "generateConvertedFixtures$id" })
             val generator = p.tasks.getByName("generateConvertedFixtures$id")
             assertFalse(generator.taskDependencies.getDependencies(generator).any { it is org.gradle.api.tasks.testing.Test })
         }
-        assertTrue(p.configurations.getByName("conversionIntegrationTestOrm8Implementation").extendsFrom.isEmpty())
+        assertTrue(p.configurations.getByName("conversionIntegrationTestOrm80Implementation").extendsFrom.isEmpty())
     }
     @Test fun `unknown environment fails without resolution`() {
         val p = project(); configure(p)
-        p.extensions.getByType(MigrationTestingExtension::class.java).migrations.getByName("orm8").sourceEnvironment.set("missing")
+        p.extensions.getByType(MigrationTestingExtension::class.java).migrations.getByName("orm80").sourceEnvironment.set("missing")
         val failure = assertThrows(org.gradle.api.ProjectConfigurationException::class.java) { p.evaluate() }
         assertTrue(failure.cause.toString().contains("Unknown source environment"), failure.toString())
     }
@@ -50,7 +50,7 @@ class MigrationTestingPluginTest {
         assertTrue(failure.cause.toString().contains("Unsupported toolchain pair"), failure.toString())
     }
     @Test fun `task collisions are rejected`() {
-        val p = project(); configure(p); p.tasks.register("conversionIntegrationTestOrm8")
+        val p = project(); configure(p); p.tasks.register("conversionIntegrationTestOrm80")
         val failure = assertThrows(org.gradle.api.ProjectConfigurationException::class.java) { p.evaluate() }
         assertTrue(failure.cause.toString().contains("already exists"), failure.toString())
     }
