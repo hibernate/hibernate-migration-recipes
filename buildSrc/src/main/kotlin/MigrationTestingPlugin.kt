@@ -8,9 +8,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.bundling.Jar
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
-import org.gradle.jvm.toolchain.*
 import java.util.Properties
 import javax.inject.Inject
 
@@ -26,8 +24,6 @@ open class OrmEnvironment @Inject constructor(private val id: String, objects: O
     override fun getName() = id
     /** Exact published Hibernate ORM release, for example `7.4.11.Final`. */
     val ormVersion = objects.property(String::class.java)
-    /** JDK used to compile and execute this environment's validation suite. Defaults to 21. */
-    val javaVersion = objects.property(Int::class.java).convention(21)
 }
 
 /**
@@ -35,7 +31,7 @@ open class OrmEnvironment @Inject constructor(private val id: String, objects: O
  *
  * Its name determines the generated test SourceSet and task suffix: `orm80` produces
  * `conversionTestOrm80`, `generateConvertedFixturesOrm80`, and
- * `conversionIntegrationTestOrm80`. Source and target currently require the same JDK.
+ * `conversionIntegrationTestOrm80`. Both suites use the JDK running Gradle.
  *
  * @author Steve Ebersole
  */
@@ -119,7 +115,7 @@ class MigrationTestingPlugin : Plugin<Project> {
         pluginManager.apply("java")
         val model = extensions.create("migrationTesting", MigrationTestingExtension::class.java)
         val java = extensions.getByType(JavaPluginExtension::class.java)
-        val toolchains = extensions.getByType(JavaToolchainService::class.java)
+        val javaVersion = JavaVersion.current().majorVersion.toInt()
         val metadata = layout.buildDirectory.file("migration-testing/environments.properties")
         val verify = tasks.register("verifyMigrationEnvironments") {
             group = "verification"
@@ -151,7 +147,6 @@ class MigrationTestingPlugin : Plugin<Project> {
                 val target = environments[migration.targetEnvironment.get()]
                     ?: error("Unknown target environment ${migration.targetEnvironment.get()} for ${migration.name}")
                 require(source.name != target.name) { "Source and target environments must differ for ${migration.name}" }
-                require(source.javaVersion.get() == target.javaVersion.get()) { "Unsupported toolchain pair for ${migration.name}: ${source.javaVersion.get()} -> ${target.javaVersion.get()}" }
                 val sourceName = "conversionTest$suffix"
                 val targetName = "conversionIntegrationTest$suffix"
                 listOf(sourceName, targetName, "generateConvertedFixtures$suffix").forEach {
@@ -176,9 +171,6 @@ class MigrationTestingPlugin : Plugin<Project> {
                 dependencies.add(targetSet.implementationConfigurationName, "org.hibernate.orm:hibernate-core:${target.ormVersion.get()}")
                 dependencies.add(targetSet.runtimeOnlyConfigurationName, migration.databaseDependency.get())
                 listOf(sourceSet to source, targetSet to target).forEach { (suite, env) ->
-                    tasks.named(suite.compileJavaTaskName, JavaCompile::class.java) {
-                        javaCompiler.set(toolchains.compilerFor { languageVersion.set(JavaLanguageVersion.of(env.javaVersion.get())) })
-                    }
                     suiteChecks.add(Triple(suite.name, configurations.getByName(suite.compileClasspathConfigurationName), env.name))
                     suiteChecks.add(Triple(suite.name, configurations.getByName(suite.runtimeClasspathConfigurationName), env.name))
                 }
@@ -190,7 +182,6 @@ class MigrationTestingPlugin : Plugin<Project> {
                     testClassesDirs = sourceSet.output.classesDirs
                     classpath = sourceSet.runtimeClasspath
                     useJUnitPlatform()
-                    javaLauncher.set(toolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(source.javaVersion.get())) })
                     maxHeapSize = "1g"
                     dependsOn(verify, recipeJar)
                     inputs.file(recipeJar.flatMap { it.archiveFile })
@@ -205,13 +196,12 @@ class MigrationTestingPlugin : Plugin<Project> {
                     description = "Generates the complete validated fixture set for ${migration.name}."
                     classpath = sourceSet.runtimeClasspath
                     mainClass.set(migration.generatorMainClass)
-                    javaLauncher.set(toolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(source.javaVersion.get())) })
                     maxHeapSize = "1g"
                     dependsOn(verify)
                     inputs.file(metadata)
                     inputs.files(profiles.values.flatMap { listOf(it.first, it.second) })
                     inputs.property("migration", migration.name)
-                    inputs.property("javaVersion", source.javaVersion)
+                    inputs.property("javaVersion", javaVersion)
                     outputs.dir(output)
                     systemProperty("migration.metadata", metadata.get().asFile.absolutePath)
                     systemProperty("migration.id", migration.name)
@@ -225,7 +215,6 @@ class MigrationTestingPlugin : Plugin<Project> {
                     testClassesDirs = targetSet.output.classesDirs
                     classpath = targetSet.runtimeClasspath
                     useJUnitPlatform()
-                    javaLauncher.set(toolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(target.javaVersion.get())) })
                     maxHeapSize = "1g"
                     dependsOn(generator, verify)
                     inputs.dir(output)
@@ -239,7 +228,8 @@ class MigrationTestingPlugin : Plugin<Project> {
             verify.configure {
                 inputs.files(profiles.values.flatMap { listOf(it.first, it.second) })
                 inputs.files(suiteChecks.map { it.second })
-                inputs.property("environments", environments.mapValues { "${it.value.ormVersion.get()}:${it.value.javaVersion.get()}" })
+                inputs.property("environments", environments.mapValues { it.value.ormVersion.get() })
+                inputs.property("javaVersion", javaVersion)
                 inputs.property("migrations", paths.toString())
                 doLast {
                     val values = Properties()
@@ -260,7 +250,7 @@ class MigrationTestingPlugin : Plugin<Project> {
                         values["$id.compile"] = pair.first.asPath
                         values["$id.runtime"] = pair.second.asPath
                         values["$id.jpaVersion"] = jpa
-                        values["$id.javaVersion"] = (environments[id]?.javaVersion?.get() ?: 21).toString()
+                        values["$id.javaVersion"] = javaVersion.toString()
                         if (core != null) {
                             values["$id.ormVersion"] = core
                             values["$id.ormJar"] = pair.second.resolvedConfiguration.resolvedArtifacts.single { it.moduleVersion.id.group == "org.hibernate.orm" && it.name == "hibernate-core" }.file.absolutePath

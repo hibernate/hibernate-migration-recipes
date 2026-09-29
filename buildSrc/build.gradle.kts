@@ -6,10 +6,6 @@ repositories {
     mavenCentral(); gradlePluginPortal()
 }
 
-java {
-    toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
-}
-
 gradlePlugin {
     plugins {
         create("migrationTesting") {
@@ -26,4 +22,3 @@ dependencies {
 }
 
 tasks.test { useJUnitPlatform() }
-
