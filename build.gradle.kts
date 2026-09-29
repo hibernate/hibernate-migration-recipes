@@ -27,11 +27,9 @@ migrationTesting {
     environments {
         register("orm74") {
             ormVersion.set("7.4.11.Final")
-            javaVersion.set(21)
         }
         register("orm80") {
             ormVersion.set("8.0.0.Beta3")
-            javaVersion.set(21)
         }
     }
     migrations {
@@ -48,8 +46,7 @@ migrationTesting {
     }
 }
 
-java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
-tasks.named<JavaCompile>("compileJava") { options.release.set(8) }
+tasks.named<JavaCompile>("compileJava") { options.release.set(17) }
 sourceSets.test {
     java.srcDir("src/testSupport/java")
     resources.srcDir("src/testSupport/resources")
