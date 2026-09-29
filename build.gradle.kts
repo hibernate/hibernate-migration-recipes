@@ -36,7 +36,7 @@ migrationTesting {
         register("orm80") {
             sourceEnvironment.set("orm74")
             targetEnvironment.set("orm80")
-            databaseDependency.set("com.h2database:h2:2.4.240")
+            databaseDependency.set("com.h2database:h2:2.5.252")
         }
     }
     supplementaryApis {
