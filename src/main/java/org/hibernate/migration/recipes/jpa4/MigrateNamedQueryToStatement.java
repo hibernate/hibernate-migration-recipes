@@ -361,6 +361,15 @@ public class MigrateNamedQueryToStatement extends Recipe {
 				}
 				final boolean[] conflict = {false};
 				new JavaIsoVisitor<Integer>() {
+                    @Override
+                    public J.TypeParameter visitTypeParameter(J.TypeParameter parameter, Integer p) {
+                        if (parameter.getName() instanceof J.Identifier
+                                && target.equals(((J.Identifier) parameter.getName()).getSimpleName())) {
+                            conflict[0] = true;
+                        }
+                        return super.visitTypeParameter(parameter, p);
+                    }
+
 					@Override
 					public J.@NonNull ClassDeclaration visitClassDeclaration(
 							J.@NonNull ClassDeclaration cd,

@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /// Boots and executes actual recipe output with published Hibernate ORM and JPA artifacts.
 /// @author Steve Ebersole
-class ConversionIntegrationTestOrm8 {
+class ConversionIntegrationTestOrm80 {
     @TempDir Path classes;
     URLClassLoader loader;
     SessionFactory factory;
@@ -44,7 +44,7 @@ class ConversionIntegrationTestOrm8 {
         assertEquals(Integer.parseInt(environments.value(target + ".javaVersion")), Runtime.version().feature());
         assertTrue(EntityManager.class.getResource("EntityManager.class").toString().contains("jakarta.persistence-api-" + environments.value(target + ".jpaVersion") + ".jar"));
         assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "-proc:none", "--release", environments.value(target + ".javaVersion"), "-classpath", System.getProperty("java.class.path"), "-d", classes.toString(), source.toString()));
-        loader = new URLClassLoader(new java.net.URL[] { classes.toUri().toURL() }, ConversionIntegrationTestOrm8.class.getClassLoader());
+        loader = new URLClassLoader(new java.net.URL[] { classes.toUri().toURL() }, ConversionIntegrationTestOrm80.class.getClassLoader());
         fixture = loader.loadClass("fixture.Migrated");
         item = loader.loadClass("fixture.Migrated$Item");
         department = loader.loadClass("fixture.Migrated$Department");

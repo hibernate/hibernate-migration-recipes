@@ -29,15 +29,15 @@ migrationTesting {
             ormVersion.set("7.4.11.Final")
             javaVersion.set(21)
         }
-        register("orm8") {
+        register("orm80") {
             ormVersion.set("8.0.0.Beta3")
             javaVersion.set(21)
         }
     }
     migrations {
-        register("orm8") {
+        register("orm80") {
             sourceEnvironment.set("orm74")
-            targetEnvironment.set("orm8")
+            targetEnvironment.set("orm80")
             databaseDependency.set("com.h2database:h2:2.4.240")
         }
     }
