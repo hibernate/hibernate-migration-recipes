@@ -55,9 +55,14 @@ and fixture generation depend on its compilation and track its Java sources as t
 inputs. Its compiled classes are not added to either test suite or the generator's
 runtime classpath, and are not packaged in the production JAR.
 
-The initial proof of concept covers QueryFlushMode scenarios under
-`fixture/queryflush/` and the shared runtime input `fixture/Migrated.java`.
-Independent scenarios use distinct packages so all inputs compile together.
+Source-compatible Java inputs use this SourceSet, including QueryFlushMode,
+named-query, delegate, map-key, composite, and temporal scenarios. Independent
+scenarios use distinct packages so all inputs compile together. Finite syntax
+matrices use checked-in Java variants instead of assembling Java in the tests.
+Use normal source formatting, including tabs and expanded method bodies. Omit
+Javadoc from migration inputs unless it is part of the behavior being tested.
+The runtime inputs are `fixture/Migrated.java`, `fixture/TemporalEntity.java`,
+and the Java files under `xmlfixture/`.
 `MigrationSources.configured()` reads from the source root supplied by Gradle through
 `migration.sources`. Use `files(...)` for selected files or `scenario(...)` for all
 Java files under a scenario directory. Both preserve source-root-relative paths.
@@ -68,7 +73,11 @@ Keep target compilation and fresh-target idempotence validation with `ApiValidat
 Compilation of this SourceSet validates only the primary source environment;
 applicable supplementary JPA profiles are still checked separately by conversion
 tests. Deliberately invalid or attribution-deficient inputs stay outside the compiled
-SourceSet. Other fixtures remain embedded until migrated to this arrangement.
+SourceSet. Inputs that require target-only APIs also stay outside this source
+SourceSet. Expected-output text and small assertions about preserved source
+regions may remain inline; XML-specific tests continue to construct their XML
+inputs. Preserve line endings when adding fixtures for CRLF behavior, and assert
+diagnostics against the actual fixture paths and original file coordinates.
 
 Recipe-specific conversion suites own API validation and diagnostic cases. `TemporalDiagnosticsTest` checks reporting precedence and original coordinates; temporal runtime verification separates value contracts from persistence and isolates reflection in a fixture-access helper.
 
@@ -143,8 +152,9 @@ Integration tests consume generated recipe output through a validated fixture ha
 
 The current fixture catalog is `src/testSupport/resources/orm80-fixtures.properties`.
 `fixture/Migrated.java` in the compiled migration-input SourceSet supplies the shared
-runtime Java input. `TemporalRuntimeFixture` and `XmlRuntimeFixtures` still supply
-embedded source text. `ConvertedFixtureGenerator` applies the recipes for every
+runtime Java input. The temporal runtime input and XML runtime Java inputs also
+come from this SourceSet; `XmlRuntimeFixtures` supplies the XML descriptor inputs.
+`ConvertedFixtureGenerator` applies the recipes for every
 declared variant. XML fixtures include emitted descriptors alongside Java sources
 in the same hashed manifest; runtime checks consume those actual emitted files.
 `XmlRecipeSupport` validates XML against the published schemas and checks idempotence.

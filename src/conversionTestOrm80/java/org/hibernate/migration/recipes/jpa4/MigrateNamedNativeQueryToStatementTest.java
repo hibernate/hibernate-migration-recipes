@@ -1,6 +1,7 @@
 package org.hibernate.migration.recipes.jpa4;
 
 import org.hibernate.migration.testing.ApiValidation;
+import org.hibernate.migration.testing.MigrationSources;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
@@ -42,29 +43,22 @@ class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeQuery;
+                MigrationSources.configured().read("fixture/jpa4/namednativequerytostatement/dmlnamednativequerybecomesnamednativestatement/Book.java"),
+                """
+                package fixture.jpa4.namednativequerytostatement.dmlnamednativequerybecomesnamednativestatement;
 
-                        @NamedNativeQuery(name = "Book.nativeDelete", query = "DELETE FROM BOOK WHERE year < 2000")
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeStatement;
+                import jakarta.persistence.Entity;
+                import jakarta.persistence.Id;
+                import jakarta.persistence.NamedNativeStatement;
 
-                        @NamedNativeStatement(name = "Book.nativeDelete", statement = "DELETE FROM BOOK WHERE year < 2000")
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """
-                )
+                @NamedNativeStatement(name = "Book.nativeDelete", statement = "DELETE FROM BOOK WHERE year < 2000")
+                @Entity
+                class Book {
+                \t@Id
+                \tLong id;
+                }
+                """
+          )
         );
     }
 
@@ -73,18 +67,8 @@ class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeQuery;
-
-                        @NamedNativeQuery(name = "Book.findAll", query = "SELECT * FROM BOOK")
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """
-                )
+                MigrationSources.configured().read("fixture/jpa4/namednativequerytostatement/selectnamednativequeryisnotchanged/Book.java")
+          )
         );
     }
 
@@ -93,29 +77,22 @@ class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeQuery;
+                MigrationSources.configured().read("fixture/jpa4/namednativequerytostatement/updatenamednativequerybecomesnamednativestatement/Book.java"),
+                """
+                package fixture.jpa4.namednativequerytostatement.updatenamednativequerybecomesnamednativestatement;
 
-                        @NamedNativeQuery(name = "Book.nativeUpdate", query = "UPDATE BOOK SET title = :t WHERE id = :id")
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeStatement;
+                import jakarta.persistence.Entity;
+                import jakarta.persistence.Id;
+                import jakarta.persistence.NamedNativeStatement;
 
-                        @NamedNativeStatement(name = "Book.nativeUpdate", statement = "UPDATE BOOK SET title = :t WHERE id = :id")
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """
-                )
+                @NamedNativeStatement(name = "Book.nativeUpdate", statement = "UPDATE BOOK SET title = :t WHERE id = :id")
+                @Entity
+                class Book {
+                \t@Id
+                \tLong id;
+                }
+                """
+          )
         );
     }
 
@@ -124,38 +101,27 @@ class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeQueries;
-                        import jakarta.persistence.NamedNativeQuery;
+                MigrationSources.configured().read("fixture/jpa4/namednativequerytostatement/mixednamednativequeriescontainersplitsdmlout/Book.java"),
+                """
+                package fixture.jpa4.namednativequerytostatement.mixednamednativequeriescontainersplitsdmlout;
 
-                        @NamedNativeQueries({
-                        	@NamedNativeQuery(name = "Book.findAll",    query = "SELECT * FROM BOOK"),
-                        	@NamedNativeQuery(name = "Book.deleteOld",  query = "DELETE FROM BOOK WHERE year < 2000")
-                        })
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeQueries;
-                        import jakarta.persistence.NamedNativeQuery;
-                        import jakarta.persistence.NamedNativeStatement;
+                import jakarta.persistence.Entity;
+                import jakarta.persistence.Id;
+                import jakarta.persistence.NamedNativeQueries;
+                import jakarta.persistence.NamedNativeQuery;
+                import jakarta.persistence.NamedNativeStatement;
 
-                        @NamedNativeQueries({
-                        	@NamedNativeQuery(name = "Book.findAll",    query = "SELECT * FROM BOOK")
-                        })
-                        @NamedNativeStatement(name = "Book.deleteOld",  statement = "DELETE FROM BOOK WHERE year < 2000")
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """
-                )
+                @NamedNativeQueries({
+                \t\t@NamedNativeQuery(name = "Book.findAll", query = "SELECT * FROM BOOK")
+                })
+                @NamedNativeStatement(name = "Book.deleteOld", statement = "DELETE FROM BOOK WHERE year < 2000")
+                @Entity
+                class Book {
+                \t@Id
+                \tLong id;
+                }
+                """
+          )
         );
     }
 
@@ -164,34 +130,23 @@ class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeQueries;
-                        import jakarta.persistence.NamedNativeQuery;
+                MigrationSources.configured().read("fixture/jpa4/namednativequerytostatement/alldmlnamednativequeriescontainerfullyreplaced/Book.java"),
+                """
+                package fixture.jpa4.namednativequerytostatement.alldmlnamednativequeriescontainerfullyreplaced;
 
-                        @NamedNativeQueries({
-                        	@NamedNativeQuery(name = "Book.nativeDelete", query = "DELETE FROM BOOK WHERE year < 2000"),
-                        	@NamedNativeQuery(name = "Book.nativeUpdate", query = "UPDATE BOOK SET title = :t WHERE id = :id")
-                        })
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeStatement;
+                import jakarta.persistence.Entity;
+                import jakarta.persistence.Id;
+                import jakarta.persistence.NamedNativeStatement;
 
-                        @NamedNativeStatement(name = "Book.nativeDelete", statement = "DELETE FROM BOOK WHERE year < 2000")
-                        @NamedNativeStatement(name = "Book.nativeUpdate", statement = "UPDATE BOOK SET title = :t WHERE id = :id")
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """
-                )
+                @NamedNativeStatement(name = "Book.nativeDelete", statement = "DELETE FROM BOOK WHERE year < 2000")
+                @NamedNativeStatement(name = "Book.nativeUpdate", statement = "UPDATE BOOK SET title = :t WHERE id = :id")
+                @Entity
+                class Book {
+                \t@Id
+                \tLong id;
+                }
+                """
+          )
         );
     }
 
@@ -200,22 +155,8 @@ class MigrateNamedNativeQueryToStatementTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedNativeQueries;
-                        import jakarta.persistence.NamedNativeQuery;
-
-                        @NamedNativeQueries({
-                        	@NamedNativeQuery(name = "Book.findAll",  query = "SELECT * FROM BOOK"),
-                        	@NamedNativeQuery(name = "Book.findById", query = "SELECT * FROM BOOK WHERE id = :id")
-                        })
-                        @Entity
-                        class Book {
-                        	@Id Long id;
-                        }
-                        """
-                )
+                MigrationSources.configured().read("fixture/jpa4/namednativequerytostatement/allselectnamednativequeriescontainerunchanged/Book.java")
+          )
         );
     }
 }

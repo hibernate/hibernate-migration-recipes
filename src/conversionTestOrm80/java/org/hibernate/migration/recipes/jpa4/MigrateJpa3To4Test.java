@@ -1,6 +1,7 @@
 package org.hibernate.migration.recipes.jpa4;
 
 import org.hibernate.migration.testing.ApiValidation;
+import org.hibernate.migration.testing.MigrationSources;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.java.JavaParser;
@@ -29,39 +30,27 @@ class MigrateJpa3To4Test implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.EntityManager;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedQuery;
+                MigrationSources.configured().read("fixture/jpa4/jpa3to4/allthreemigrationsappliedtogether/Book.java"),
+                """
+                package fixture.jpa4.jpa3to4.allthreemigrationsappliedtogether;
 
-                        @NamedQuery(name = "Book.deleteOld", query = "delete from Book where year < 2000")
-                        @Entity
-                        class Book {
-                            @Id Long id;
+                import jakarta.persistence.Entity;
+                import jakarta.persistence.EntityManager;
+                import jakarta.persistence.Id;
+                import jakarta.persistence.NamedStatement;
 
-                            void clean(EntityManager em) {
-                                Object delegate = em.getDelegate();
-                            }
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.Entity;
-                        import jakarta.persistence.EntityManager;
-                        import jakarta.persistence.Id;
-                        import jakarta.persistence.NamedStatement;
+                @NamedStatement(name = "Book.deleteOld", statement = "delete from Book where year < 2000")
+                @Entity
+                class Book {
+                \t@Id
+                \tLong id;
 
-                        @NamedStatement(name = "Book.deleteOld", statement = "delete from Book where year < 2000")
-                        @Entity
-                        class Book {
-                            @Id Long id;
-
-                            void clean(EntityManager em) {
-                                Object delegate = em.unwrap(java.lang.Object.class);
-                            }
-                        }
-                        """
-                ),
+                \tvoid clean(EntityManager em) {
+                \t\tObject delegate = em.unwrap(java.lang.Object.class);
+                \t}
+                }
+                """
+          ),
                 //language=xml
                 xml(
                         """

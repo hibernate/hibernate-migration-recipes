@@ -1,6 +1,7 @@
 package org.hibernate.migration.recipes.jpa4;
 
 import org.hibernate.migration.testing.ApiValidation;
+import org.hibernate.migration.testing.MigrationSources;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
@@ -29,25 +30,19 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.EntityManager;
-                        
-                        class MyService {
-                            void method(EntityManager em) {
-                                Object delegate = em.getDelegate();
-                            }
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.EntityManager;
-                        
-                        class MyService {
-                            void method(EntityManager em) {
-                                Object delegate = em.unwrap(java.lang.Object.class);
-                            }
-                        }
-                        """
-                )
+                MigrationSources.configured().read("fixture/jpa4/entitymanagergetdelegate/getdelegateinassignmentreplacedwithunwrap/MyService.java"),
+                """
+                package fixture.jpa4.entitymanagergetdelegate.getdelegateinassignmentreplacedwithunwrap;
+
+                import jakarta.persistence.EntityManager;
+
+                class MyService {
+                \tvoid method(EntityManager em) {
+                \t\tObject delegate = em.unwrap(java.lang.Object.class);
+                \t}
+                }
+                """
+          )
         );
     }
 
@@ -56,25 +51,19 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.EntityManager;
-                        
-                        class MyService {
-                            void method(EntityManager em) {
-                                Object delegate = (Object) em.getDelegate();
-                            }
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.EntityManager;
-                        
-                        class MyService {
-                            void method(EntityManager em) {
-                                Object delegate = (Object) em.unwrap(java.lang.Object.class);
-                            }
-                        }
-                        """
-                )
+                MigrationSources.configured().read("fixture/jpa4/entitymanagergetdelegate/getdelegatewithcastreplacedwithunwrap/MyService.java"),
+                """
+                package fixture.jpa4.entitymanagergetdelegate.getdelegatewithcastreplacedwithunwrap;
+
+                import jakarta.persistence.EntityManager;
+
+                class MyService {
+                \tvoid method(EntityManager em) {
+                \t\tObject delegate = (Object) em.unwrap(java.lang.Object.class);
+                \t}
+                }
+                """
+          )
         );
     }
 
@@ -83,25 +72,19 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        import jakarta.persistence.EntityManager;
-                        
-                        class MyService {
-                            Object getUnderlying(EntityManager em) {
-                                return em.getDelegate();
-                            }
-                        }
-                        """,
-                        """
-                        import jakarta.persistence.EntityManager;
-                        
-                        class MyService {
-                            Object getUnderlying(EntityManager em) {
-                                return em.unwrap(java.lang.Object.class);
-                            }
-                        }
-                        """
-                )
+                MigrationSources.configured().read("fixture/jpa4/entitymanagergetdelegate/getdelegateinreturnstatementreplacedwithunwrap/MyService.java"),
+                """
+                package fixture.jpa4.entitymanagergetdelegate.getdelegateinreturnstatementreplacedwithunwrap;
+
+                import jakarta.persistence.EntityManager;
+
+                class MyService {
+                \tObject getUnderlying(EntityManager em) {
+                \t\treturn em.unwrap(java.lang.Object.class);
+                \t}
+                }
+                """
+          )
         );
     }
 
@@ -110,16 +93,8 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
         rewriteRun(
                 //language=java
                 java(
-                        """
-                        class OtherManager {
-                            Object getDelegate() { return this; }
-                        
-                            void method(OtherManager other) {
-                                Object d = other.getDelegate();
-                            }
-                        }
-                        """
-                )
+                MigrationSources.configured().read("fixture/jpa4/entitymanagergetdelegate/getdelegateonnonentitymanagerisnotchanged/OtherManager.java")
+          )
         );
     }
 }

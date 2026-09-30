@@ -3,7 +3,6 @@ package org.hibernate.migration.recipes.jpa4;
 import org.hibernate.migration.testing.ApiValidation;
 
 import org.hibernate.migration.recipes.temporal.MigrateTemporalAnnotation;
-import org.hibernate.migration.recipes.temporal.TemporalRuntimeFixture;
 
 import org.hibernate.migration.testing.FixtureBundle;
 import org.hibernate.migration.testing.MigrationSources;
@@ -31,7 +30,7 @@ public final class ConvertedFixtureGenerator {
                 recipe = new MigrateTemporalAnnotation(target, true, "+02:00", "Europe/Paris",
                         MigrateTemporalAnnotation.LocalTimezoneSource.ZONE_ID);
                 if (!entry.recipe().equals(recipe.getName())) throw new IllegalArgumentException("Wrong temporal recipe");
-                sources = Map.of("fixture/TemporalEntity.java", TemporalRuntimeFixture.source());
+                sources = MigrationSources.configured().files("fixture/TemporalEntity.java");
             }
             else throw new IllegalArgumentException("Unknown fixture " + entry.fixture());
             var result = ApiValidation.run(recipe, sources, environments.context(entry.variant()));

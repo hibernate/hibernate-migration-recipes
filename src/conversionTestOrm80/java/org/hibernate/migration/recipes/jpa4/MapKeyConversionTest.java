@@ -1,6 +1,7 @@
 package org.hibernate.migration.recipes.jpa4;
 
 import org.hibernate.migration.testing.ApiValidation;
+import org.hibernate.migration.testing.MigrationSources;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -13,23 +14,12 @@ class MapKeyConversionTest {
     @ParameterizedTest
     @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
     void mapKeys(String api) {
-        String source = """
-                import jakarta.persistence.*;
-                import java.util.Map;
-                class Example {
-                    static final String KEY = "id";
-                    @MapKey(/*before*/ name /*equal*/ = /*value*/ KEY /*after*/)
-                    Map<String, Object> values;
-                    @jakarta.persistence.MapKey(name = "") Map<String, Object> empty;
-                    @MapKey(name = "id") Map<String, Object> getValues() { return values; }
-                    @MapKey Map<String, Object> plain;
-                    String unrelated = "name";
-                }
-                """;
-        var result = ApiValidation.run(new MigrateMapKeyNameToValue(), source, api);
+        var sourceFiles = MigrationSources.configured().files("fixture/jpa4/mapkeyconversion/mapkeys/Example.java");
+        String source = sourceFiles.get("fixture/jpa4/mapkeyconversion/mapkeys/Example.java");
+        var result = ApiValidation.run(new MigrateMapKeyNameToValue(), sourceFiles, api);
         assertTrue(result.skipped().isEmpty());
         assertTrue(result.text().contains("@jakarta.persistence.MapKey(\"\")"));
-        assertTrue(result.text().contains("@MapKey(\"id\") Map<String, Object> getValues()"));
+        assertTrue(result.text().matches("(?s).*@MapKey\\(\"id\"\\)\\s+Map<String, Object> getValues\\(\\).*"));
         for (String comment : List.of("before", "equal", "value", "after")) assertEquals(1, occurrences(result.text(), "/*" + comment + "*/"), result.text());
         assertTrue(result.text().contains("String unrelated = \"name\";"));
     }

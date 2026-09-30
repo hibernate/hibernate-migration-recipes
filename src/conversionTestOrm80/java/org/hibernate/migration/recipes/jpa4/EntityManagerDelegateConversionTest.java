@@ -1,6 +1,7 @@
 package org.hibernate.migration.recipes.jpa4;
 
 import org.hibernate.migration.testing.ApiValidation;
+import org.hibernate.migration.testing.MigrationSources;
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,123 +15,81 @@ class EntityManagerDelegateConversionTest {
     @ParameterizedTest
     @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
     void delegateDispatch(String api) {
-        String source = """
-                import jakarta.persistence.EntityManager;
-                abstract class Example implements EntityManager {
-                    Object direct() { return getDelegate(/*inside*/); }
-                    Object explicit() { return this.getDelegate(); }
-                    EntityManager obtain() { return this; }
-                    Object effect() { return obtain().getDelegate(); }
-                    Object shadow() { class Object {} return getDelegate(); }
-                }
-                class Unrelated { Object getDelegate() { return null; } Object call() { return getDelegate(); } }
-                """;
-        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), source, api);
+        var sourceFiles = MigrationSources.configured().files("fixture/jpa4/entitymanagerdelegateconversion/delegatedispatch/Example.java");
+        String source = sourceFiles.get("fixture/jpa4/entitymanagerdelegateconversion/delegatedispatch/Example.java");
+        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sourceFiles, api);
         assertTrue(result.skipped().isEmpty());
         assertEquals(4, occurrences(result.text(), "java.lang.Object.class"));
         assertTrue(result.text().contains("obtain().unwrap(java.lang.Object.class)"));
-        assertTrue(result.text().contains("unwrap(/*inside*/java.lang.Object.class)"));
-        assertTrue(result.text().contains("Object call() { return getDelegate(); }"));
+        assertTrue(result.text().matches("(?s).*unwrap\\(/\\*inside\\*/\\s*java\\.lang\\.Object\\.class\\).*"));
+        assertTrue(result.text().matches("(?s).*Object call\\(\\)\\s*\\{\\s*return getDelegate\\(\\);\\s*}.*"));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
     void delegateSkips(String api) {
-        String source = """
-                import jakarta.persistence.EntityManager;
-                import java.util.function.Supplier;
-                abstract class Example implements EntityManager {
-                    public Object getDelegate() { return this; }
-                    Object own() { return getDelegate(); }
-                    Supplier<Object> ref() { return this::getDelegate; }
-                }
-                class Other {
-                    Object conflict(EntityManager em, Object java) { return em.getDelegate(); }
-                    Supplier<Object> ref(EntityManager em) { return em::getDelegate; }
-                }
-                """;
-        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), source, api);
+        String path = "fixture/jpa4/entitymanagerdelegateconversion/delegateskips/Example.java";
+        var sourceFiles = MigrationSources.configured().files(path);
+        String source = sourceFiles.get(path);
+        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sourceFiles, api);
         assertEquals(source, result.text());
         assertReasonsByLine(result.skipped(), Map.of(
-                5, "UNSUPPORTED_METHOD_OVERRIDE",
-                6, "UNSUPPORTED_METHOD_REFERENCE",
-                9, "NAME_RESOLUTION_CONFLICT",
-                10, "UNSUPPORTED_METHOD_REFERENCE"), api);
+                13, "UNSUPPORTED_METHOD_OVERRIDE",
+                17, "UNSUPPORTED_METHOD_REFERENCE",
+                23, "NAME_RESOLUTION_CONFLICT",
+                27, "UNSUPPORTED_METHOD_REFERENCE"), api, path);
     }
 
     @Test
     void delegatePackageTypeShadowAndSuperOverride() {
-        String source = """
-                import jakarta.persistence.EntityManager;
-                class java {}
-                abstract class Base implements EntityManager {
-                    public Object getDelegate() { return this; }
-                }
-                abstract class Example extends Base {
-                    Object inherited() { return super.getDelegate(); }
-                    Object call(EntityManager em) { return em.getDelegate(); }
-                }
-                """;
-        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), source, "jpa32");
+        String path = "fixture/jpa4/entitymanagerdelegateconversion/delegatepackagetypeshadowandsuperoverride/Example.java";
+        var sourceFiles = MigrationSources.configured().files(path);
+        String source = sourceFiles.get(path);
+        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sourceFiles, "jpa32");
         assertEquals(source, result.text());
-        assertReasonsByLine(result.skipped(), Map.of(7, "UNSUPPORTED_METHOD_OVERRIDE", 8, "NAME_RESOLUTION_CONFLICT"), "jpa32");
+        assertReasonsByLine(result.skipped(), Map.of(7, "UNSUPPORTED_METHOD_OVERRIDE", 11, "NAME_RESOLUTION_CONFLICT"), "jpa32", path);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
     void delegateTypeParameterConflicts(String api) {
-        String source = """
-                import jakarta.persistence.EntityManager;
-                class Example<java> {
-                    Object call(EntityManager em) { return em.getDelegate(); }
-                }
-                class MethodExample {
-                    <java> Object call(EntityManager em) { return em.getDelegate(); }
-                }
-                """;
-        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), source, api);
+        String path = "fixture/jpa4/entitymanagerdelegateconversion/delegatetypeparameterconflicts/Example.java";
+        var sourceFiles = MigrationSources.configured().files(path);
+        String source = sourceFiles.get(path);
+        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sourceFiles, api);
         assertEquals(source, result.text());
-        assertReasonsByLine(result.skipped(), Map.of(3, "NAME_RESOLUTION_CONFLICT", 6, "NAME_RESOLUTION_CONFLICT"), api);
+        assertReasonsByLine(result.skipped(), Map.of(7, "NAME_RESOLUTION_CONFLICT", 13, "NAME_RESOLUTION_CONFLICT"), api, path);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
     void delegateInheritedMemberTypeConflictsAcrossFiles(String api) {
-        String base = "class Base { static class java {} }";
-        String source = """
-                import jakarta.persistence.EntityManager;
-                class Middle extends Base {}
-                class Example extends Middle {
-                    Object call(EntityManager em) { return em.getDelegate(); }
-                }
-                """;
-        String unrelated = """
-                import jakarta.persistence.EntityManager;
-                class Unrelated {
-                    Object call(EntityManager em) { return em.getDelegate(); }
-                }
-                """;
+        String base = MigrationSources.configured().read("fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Base.java");
+        String path = "fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Example.java";
+        var sourceFiles = MigrationSources.configured().files(path);
+        String source = sourceFiles.get(path);
+        String unrelated = MigrationSources.configured().read("fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Unrelated.java");
         var sources = new java.util.LinkedHashMap<String, String>();
         // The subtype precedes the member-type declaration to exercise scan-before-edit behavior.
-        sources.put("Example.java", source);
-        sources.put("Unrelated.java", unrelated);
-        sources.put("Base.java", base);
+        sources.put(path, source);
+        sources.put("fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Unrelated.java", unrelated);
+        sources.put("fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Base.java", base);
         var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sources, api);
-        assertEquals(source, result.files().get("Example.java"));
-        assertEquals(base, result.files().get("Base.java"));
-        assertTrue(result.files().get("Unrelated.java").contains("unwrap(java.lang.Object.class)"));
-        assertReasonsByLine(result.skipped(), Map.of(4, "NAME_RESOLUTION_CONFLICT"), api);
+        assertEquals(source, result.files().get(path));
+        assertEquals(base, result.files().get("fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Base.java"));
+        assertTrue(result.files().get("fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Unrelated.java").contains("unwrap(java.lang.Object.class)"));
+        assertReasonsByLine(result.skipped(), Map.of(10, "NAME_RESOLUTION_CONFLICT"), api, path);
     }
 
-    private static void assertReasonsByLine(List<SkippedMigrations.Row> rows, Map<Integer, String> expected, String api) {
+    private static void assertReasonsByLine(List<SkippedMigrations.Row> rows, Map<Integer, String> expected, String api, String path) {
         assertEquals(expected.size(), rows.size(), api + ": exact candidate count");
         var byLine = rows.stream().collect(java.util.stream.Collectors.groupingBy(SkippedMigrations.Row::getLine));
         assertEquals(expected.keySet(), byLine.keySet(), api + ": original candidate lines");
         expected.forEach((line, reason) -> {
             var candidates = byLine.get(line);
-            String context = api + " / Example.java:" + line;
+            String context = api + " / " + path + ":" + line;
             assertEquals(1, candidates.size(), context);
-            assertEquals("Example.java", candidates.getFirst().getSourcePath(), context);
+            assertEquals(path, candidates.getFirst().getSourcePath(), context);
             assertEquals(reason, candidates.getFirst().getReasonCode(), context);
         });
     }

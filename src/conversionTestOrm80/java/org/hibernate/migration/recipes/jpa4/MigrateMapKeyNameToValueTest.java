@@ -1,6 +1,7 @@
 package org.hibernate.migration.recipes.jpa4;
 
 import org.hibernate.migration.testing.ApiValidation;
+import org.hibernate.migration.testing.MigrationSources;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
@@ -30,24 +31,19 @@ class MigrateMapKeyNameToValueTest implements RewriteTest {
         rewriteRun(
           //language=java
           java(
-            """
-            import jakarta.persistence.MapKey;
-            import java.util.Map;
+                MigrationSources.configured().read("fixture/jpa4/mapkeynametovalue/mapkeynamebecomesshorthandvalue/Department.java"),
+                """
+                package fixture.jpa4.mapkeynametovalue.mapkeynamebecomesshorthandvalue;
 
-            class Department {
-                @MapKey(name = "empId")
-                Map<Integer, Object> employees;
-            }
-            """,
-            """
-            import jakarta.persistence.MapKey;
-            import java.util.Map;
+                import jakarta.persistence.MapKey;
 
-            class Department {
-                @MapKey("empId")
-                Map<Integer, Object> employees;
-            }
-            """
+                import java.util.Map;
+
+                class Department {
+                \t@MapKey("empId")
+                \tMap<Integer, Object> employees;
+                }
+                """
           )
         );
     }
@@ -57,15 +53,7 @@ class MigrateMapKeyNameToValueTest implements RewriteTest {
         rewriteRun(
           //language=java
           java(
-            """
-            import jakarta.persistence.MapKey;
-            import java.util.Map;
-
-            class Department {
-                @MapKey
-                Map<Integer, Object> employees;
-            }
-            """
+                MigrationSources.configured().read("fixture/jpa4/mapkeynametovalue/mapkeywithoutattributeisnotchanged/Department.java")
           )
         );
     }
