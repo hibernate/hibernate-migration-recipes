@@ -31,12 +31,26 @@ Hibernate-specific recipes live in `org.hibernate.migration.recipes.orm80`:
 
 * `MigrateMappingXml`
 * `MigrateQueryFlushMode`
+* `MigrateFindMultipleOptions`
 
 `MigrateQueryFlushMode` replaces Java references to `org.hibernate.query.QueryFlushMode`
 with `jakarta.persistence.QueryFlushMode`, including static imports, declarations,
 and named-query annotation values. The constants `FLUSH`, `NO_FLUSH`, and `DEFAULT`
 and existing query method calls are preserved. It does not convert other flush-mode
 enums or class names in strings.
+
+`MigrateFindMultipleOptions` relocates Java references to `org.hibernate.OrderingMode`,
+`org.hibernate.SessionCheckMode`, `org.hibernate.RemovalsMode`, and `org.hibernate.BatchSize`
+to the corresponding nested types in `org.hibernate.FindMultipleOption`. It handles
+imports (including static and wildcard imports), declarations, enum constants,
+class literals, and batch-size constructors and constructor references. Conflicting
+simple names use fully qualified references. Enum constants, explicit option values,
+and loading calls are preserved.
+
+The recipe requires attributed Hibernate types. Unrelated types, the
+`org.hibernate.annotations.BatchSize` annotation, and class-name strings remain unchanged.
+It does not insert options into calls that omit them or compensate for changed defaults,
+including the nested `SessionCheckMode` default.
 
 See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces, versions, package descriptors, and comment handling.
 

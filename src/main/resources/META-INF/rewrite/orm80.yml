@@ -7,7 +7,8 @@ description: >-
   Includes the JPA 3.x to 4.0 migration, upgrades Hibernate mapping XML
   from schema 7.0 to 8.0, migrates table and column comments, and removes
   the ignored many-to-many orphan-removal attribute, and replaces Hibernate's
-  QueryFlushMode enum with Jakarta Persistence's QueryFlushMode.
+  QueryFlushMode enum with Jakarta Persistence's QueryFlushMode, and relocates
+  multi-ID loading options to nested FindMultipleOption types.
 recipeList:
   - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
   - org.hibernate.migration.recipes.jpa4.MigratePersistenceXml
@@ -16,3 +17,4 @@ recipeList:
   - org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue
   - org.hibernate.migration.recipes.orm80.MigrateMappingXml
   - org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode
+  - org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions
