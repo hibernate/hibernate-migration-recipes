@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.*;
 
-/// Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments and canonical schema references.
+/// Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments, ignored many-to-many orphan removal, and canonical schema references.
 ///
 /// @author Steve Ebersole
 public class MigrateMappingXml extends Recipe {
@@ -26,12 +26,21 @@ public class MigrateMappingXml extends Recipe {
     private final transient SkippedMigrations skipped = new SkippedMigrations(this);
 
     @Override public @NonNull String getDisplayName() { return "Migrate Hibernate mapping XML to 8.0"; }
-    @Override public @NonNull String getDescription() { return "Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments and canonical schema references."; }
+    @Override public @NonNull String getDescription() {
+        return "Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments and canonical schema references. "
+                + "Removes orphan-removal from many-to-many elements: Hibernate never processed this attribute, so removing it preserves existing behavior.";
+    }
     @Override public @NonNull TreeVisitor<?, ExecutionContext> getVisitor() {
         return new DescriptorVisitor(this, skipped, Descriptor.MAPPING) {
             @Override public Xml.@NonNull Tag visitTag(Xml.@NonNull Tag tag, @NonNull ExecutionContext ctx) {
                 String type = schemaType();
                 if (type == null) return tag;
+                if ("many-to-many".equals(type)) {
+                    Xml.Tag result = super.visitTag(tag, ctx);
+                    if (result.getAttributes().stream().noneMatch(a -> a.getKeyAsString().equals("orphan-removal"))) return result;
+                    return result.withAttributes(result.getAttributes().stream()
+                            .filter(a -> !a.getKeyAsString().equals("orphan-removal")).toList());
+                }
                 if (!PRECEDING.containsKey(type)) return super.visitTag(tag, ctx);
                 List<Xml.Attribute> attributes = tag.getAttributes().stream().filter(a -> a.getKeyAsString().equals("comment")).toList();
                 if (attributes.isEmpty()) return super.visitTag(tag, ctx);

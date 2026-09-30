@@ -69,6 +69,12 @@ Comment elements are placed in the order required by schema 8.0. Text values are
 
 If one existing comment child has the same semantic value, only the redundant attribute is removed. Different values, multiple existing comment children, duplicate comment attributes, and unresolved entity values remain unchanged with `XML_COMMENT_CONFLICT` diagnostics. Any such conflict leaves the entire document unchanged, including its version and schema reference. The recipe also handles version 8.0 documents containing legacy comment attributes.
 
+== Ignored many-to-many orphan removal
+
+`org.hibernate.migration.recipes.orm80.MigrateMappingXml` removes the unqualified `orphan-removal` attribute from schema-defined `<many-to-many>` elements. Hibernate never processed this attribute, so removing it preserves existing behavior. Both `true` and `false` values are removed, including in documents already marked as version 8.0.
+
+The attribute remains on `<one-to-many>` and `<one-to-one>`, where it is supported. Foreign-namespace attributes, unrelated XML contexts, and JPA entity-mapping documents are unaffected. Removal is part of the same document migration as version and comment changes; a conflict elsewhere leaves the entire document unchanged.
+
 == Recipe composition and review
 
 The `org.hibernate.migration.recipes.jpa4` composite registers `MigratePersistenceXml` and `MigrateOrmXml` once each. The `org.hibernate.migration.recipes.orm80` composite includes that JPA migration and registers `MigrateMappingXml` once.
