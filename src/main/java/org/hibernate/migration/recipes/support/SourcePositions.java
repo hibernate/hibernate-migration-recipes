@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: Apache-2.0 */
 package org.hibernate.migration.recipes.support;
 
 import org.jspecify.annotations.NonNull;

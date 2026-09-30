@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: Apache-2.0 */
 package org.hibernate.migration.testing;
 
 import java.io.*;

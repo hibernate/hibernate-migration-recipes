@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: Apache-2.0 */
 package org.hibernate.migration.recipes.jpa4;
 
 /// Original source shared by unit validation and the complete-fixture generator.

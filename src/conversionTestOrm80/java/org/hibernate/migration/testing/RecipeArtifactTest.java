@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: Apache-2.0 */
 package org.hibernate.migration.testing;
 
 import org.junit.jupiter.api.Test;
