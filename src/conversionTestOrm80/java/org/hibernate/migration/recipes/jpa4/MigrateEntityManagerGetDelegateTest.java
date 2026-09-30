@@ -4,6 +4,8 @@
  */
 package org.hibernate.migration.recipes.jpa4;
 
+import org.hibernate.migration.testing.ApiValidation;
+
 import org.junit.jupiter.api.Test;
 import org.openrewrite.DocumentExample;
 import org.openrewrite.test.RecipeSpec;
@@ -17,7 +19,7 @@ class MigrateEntityManagerGetDelegateTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        ApiValidation.verifyBaseline(spec);
+        ApiValidation.validateChangedJavaSourcesAfterRecipe(spec);
         spec
                 .recipe(new MigrateEntityManagerGetDelegate())
                 .parser(org.openrewrite.java.JavaParser.fromJavaVersion()

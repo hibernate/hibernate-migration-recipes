@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 package org.hibernate.migration.recipes.jpa4;
 
+import org.hibernate.migration.testing.ApiValidation;
+
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -20,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /// Validates emitted descriptors with schemas bundled in the pinned published ORM release.
 /// @author Steve Ebersole
-class PersistenceXmlHardeningTest {
+class PersistenceXmlConversionTest {
     static final String NS = "https://jakarta.ee/xml/ns/persistence";
     static final String XSI = "http://www.w3.org/2001/XMLSchema-instance";
 

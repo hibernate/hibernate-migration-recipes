@@ -4,6 +4,8 @@
  */
 package org.hibernate.migration.recipes.jpa4;
 
+import org.hibernate.migration.testing.ApiValidation;
+
 import org.junit.jupiter.api.Test;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.test.RecipeSpec;
@@ -18,7 +20,7 @@ class MigrateJpa3To4Test implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        ApiValidation.verifyBaseline(spec);
+        ApiValidation.validateChangedJavaSourcesAfterRecipe(spec);
         spec
                 .recipeFromResources("org.hibernate.migration.recipes.jpa4")
                 .parser(JavaParser.fromJavaVersion()

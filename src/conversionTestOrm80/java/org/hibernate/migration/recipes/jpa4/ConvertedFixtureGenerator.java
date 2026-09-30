@@ -1,6 +1,11 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 package org.hibernate.migration.recipes.jpa4;
 
+import org.hibernate.migration.testing.ApiValidation;
+
+import org.hibernate.migration.recipes.temporal.MigrateTemporalAnnotation;
+import org.hibernate.migration.recipes.temporal.TemporalRuntimeFixture;
+
 import org.hibernate.migration.testing.FixtureBundle;
 import java.nio.file.Path;
 import java.util.Map;
@@ -14,8 +19,21 @@ public final class ConvertedFixtureGenerator {
         var context = environments.primary();
         var entries = FixtureBundle.catalog(context.migration());
         FixtureBundle.publish(Path.of(System.getProperty("transformedFixtures")), context.migration(), context.target(), entries, environments, entry -> {
-            if (!entry.fixture().equals("runtime")) throw new IllegalArgumentException("Unknown fixture " + entry.fixture());
-            var result = ApiValidation.run(ApiValidation.composite(entry.recipe()), Map.of("fixture/Migrated.java", RuntimeFixture.source()), environments.context(entry.variant()));
+            org.openrewrite.Recipe recipe;
+            Map<String, String> sources;
+            if (entry.fixture().equals("runtime")) {
+                recipe = ApiValidation.composite(entry.recipe());
+                sources = Map.of("fixture/Migrated.java", RuntimeFixture.source());
+            }
+            else if (entry.fixture().startsWith("temporal")) {
+                var target = MigrateTemporalAnnotation.TimestampTarget.valueOf(entry.fixture().substring("temporal".length()).toUpperCase(java.util.Locale.ROOT));
+                recipe = new MigrateTemporalAnnotation(target, true, "+02:00", "Europe/Paris",
+                        MigrateTemporalAnnotation.LocalTimezoneSource.ZONE_ID);
+                if (!entry.recipe().equals(recipe.getName())) throw new IllegalArgumentException("Wrong temporal recipe");
+                sources = Map.of("fixture/TemporalEntity.java", TemporalRuntimeFixture.source());
+            }
+            else throw new IllegalArgumentException("Unknown fixture " + entry.fixture());
+            var result = ApiValidation.run(recipe, sources, environments.context(entry.variant()));
             if (!result.skipped().isEmpty()) throw new IllegalStateException("Unexpected skips for " + entry.id());
             return result.files();
         });

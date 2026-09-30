@@ -46,7 +46,11 @@ migrationTesting {
     }
 }
 
-tasks.named<JavaCompile>("compileJava") { options.release.set(17) }
+tasks.named<JavaCompile>("compileJava") {
+    options.release.set(17)
+    // OpenRewrite binds configured recipe constructor arguments by their Java parameter names.
+    options.compilerArgs.add("-parameters")
+}
 sourceSets.test {
     java.srcDir("src/testSupport/java")
     resources.srcDir("src/testSupport/resources")

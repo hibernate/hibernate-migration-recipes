@@ -12,35 +12,8 @@ Select a recipe by its identifier, not its YAML filename. A composite recipe gro
 
 == Available migrations
 
-=== Hibernate ORM 7.4 to 8.0
-
-This unreleased project currently provides these groupings:
-
-* `org.hibernate.migration.recipes.jpa4`: JPA 3.x to 4.0 for Hibernate applications.
-* `org.hibernate.migration.recipes.orm80`: ORM 7.4 to 8.0; currently delegates to the JPA grouping.
-
-Individual recipes live in `org.hibernate.migration.recipes.jpa4`:
-
-* `MigrateNamedQueryToStatement`
-* `UpdatePersistenceXmlVersion`
-* `MigrateEntityManagerGetDelegate`
-* `MigrateMapKeyNameToValue`
-
-For example, select `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue` to run only that conversion. The previous package and grouping names have been replaced; there are no compatibility aliases.
-
-These recipes do not upgrade dependency coordinates. Java matching requires the application's source JPA API on the parser classpath.
-
-==== Deferred and unsupported cases
-
-Neither grouping runs `MigrateTemporalAnnotation`. That recipe remains separately selectable as `org.hibernate.migration.recipes.jpa4.MigrateTemporalAnnotation`, with its existing behavior. Its general type replacement can affect unrelated Date/Calendar usages in the same file, break initializers/accessors, and change timezone semantics. It has not been hardened; redesign is deferred.
-
-Named-query conversion supports literal UPDATE, DELETE, and INSERT operations and preserves query text. Constants, concatenations, CTEs, leading query comments, explicit incompatible annotation members, and conflicting target containers require review. Native statements with result clauses or unsupported quoting/multiple statements remain unchanged. This is a bounded lexical check, not validation of arbitrary HQL or SQL.
-
-MapKey annotations specifying both name and value remain unchanged, even when equal. XML descriptors with unsupported namespaces, versions, or schema declarations remain unchanged. Delegate conversion targets attributed EntityManager calls and emits `unwrap(java.lang.Object.class)`; independently declared overrides, method references, and name-resolution conflicts require review.
-
-==== Validation baseline
-
-The ORM migration is validated from Hibernate ORM 7.4.11.Final with JPA 3.2.0 to ORM 8.0.0.Beta3 with JPA 4.0.0-M7. These are validation versions, not configurable recipe options.
+* link:migrations/orm80.adoc[Hibernate ORM 7.4 to 8.0]
+* link:migrations/temporal-annotation.adoc[Modernize @Temporal mappings]
 
 == Reviewing skipped migrations
 

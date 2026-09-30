@@ -1,0 +1,35 @@
+= Modernize @Temporal mappings
+
+== Selecting the recipe
+
+The ORM and JPA aggregate recipes do not run this migration. Select `org.hibernate.migration.recipes.temporal.MigrateTemporalAnnotation` explicitly for temporal modernization. It coordinates supported scalar Date/Calendar fields, direct getters/setters, initializers, assignments, and callers across the sources supplied to one execution. Both field annotations and direct getter annotations are supported. Simple local aliases, null comparisons, and transfers between compatible converted properties are supported; unrelated usages retain their types. Complex accessors, overridden or overloaded accessor contracts, escaping values, legacy temporal operations, collections, and custom mappings leave the affected property and dependent conversions unchanged with a diagnostic. External clients and reflection require review.
+
+== Configuration
+
+DATE maps to LocalDate and TIME to LocalTime. `timestampTarget` selects `INSTANT` (default), `LOCAL`, `OFFSET`, or `ZONED`. A declaration without a value conversion needs no timezone setting.
+
+For local value conversions, `localTimezoneSource` selects `OFFSET`, `ZONE_ID`, or `SYSTEM`. The first two use `offset` or `zoneId`; SYSTEM evaluates the application's default zone at runtime. OffsetDateTime and ZonedDateTime targets use `offset` and `zoneId` respectively. With `honorCalendarTimeZone` omitted or true, a source Calendar's timezone takes precedence. Instant conversion needs neither. Missing required settings leave the entire attribute unchanged; malformed supplied offsets/zones invalidate configuration.
+
+For example, define and select this custom recipe:
+
+[source,yaml]
+----
+type: specs.openrewrite.org/v1beta/recipe
+name: com.example.ModernizeTemporal
+displayName: Modernize temporal fields
+description: Convert supported temporal fields using an explicit local timezone policy.
+recipeList:
+  - org.hibernate.migration.recipes.temporal.MigrateTemporalAnnotation:
+      timestampTarget: INSTANT
+      localTimezoneSource: ZONE_ID
+      zoneId: Europe/Paris
+      honorCalendarTimeZone: true
+----
+
+Converted value expressions preserve null and evaluate the original expression once. Visible custom TimeZone construction or mutation conservatively blocks Calendar conversions that honor its timezone across the supplied source batch; Instant conversions and explicitly configured timezone overrides are unaffected. Changing mutable legacy values to immutable java.time types is an explicit data-model choice. Review callers outside the supplied source set, reflection/generated accessors, custom Calendar/TimeZone implementations, and existing data/schema compatibility. The recipe does not change Hibernate JDBC timezone or storage settings. In particular, a ZonedDateTime Java value does not guarantee that the database retains its regional zone ID.
+
+== Validation baseline
+
+Temporal conversion is validated from Hibernate ORM 7.4.11.Final with JPA 3.2.0 to ORM 8.0.0.Beta3 with JPA 4.0.0-M7. These are validation versions, not configurable recipe options.
+
+See link:../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for diagnostic reports.

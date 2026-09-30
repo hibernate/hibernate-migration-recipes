@@ -24,7 +24,7 @@ Only `main.output` belongs in the production JAR. Keep validation utilities, fix
 
 === Current ORM recipe organization
 
-The current persistence recipes live in `org.hibernate.migration.recipes.jpa4`; shared reporting lives in `org.hibernate.migration.recipes.table`. The public `org.hibernate.migration.recipes.orm80` composite currently delegates to `org.hibernate.migration.recipes.jpa4`. These describe the current layout; they do not imply support for persistence providers other than Hibernate. See link:README.adoc[the README] for recipe selection and supported behavior.
+The JPA 4 upgrade recipes and their migration-specific helpers live in `org.hibernate.migration.recipes.jpa4`. The independently selected temporal modernization recipe and its helpers live in `org.hibernate.migration.recipes.temporal`. Temporal conversion tests use matching Java packages within `conversionTestOrm80`; their SourceSet identifies the validation environment. User-facing migration guides live in `migrations/` and are linked from the README. Version-independent recipe infrastructure, including `MigrationSupport` and `SourcePositions`, lives in `org.hibernate.migration.recipes.support`; shared reporting tables live in `org.hibernate.migration.recipes.table`. The public `org.hibernate.migration.recipes.orm80` composite currently delegates to `org.hibernate.migration.recipes.jpa4`. These describe the current layout; they do not imply support for persistence providers other than Hibernate. See link:README.adoc[the README] for recipe selection and supported behavior.
 
 == Conversion testing model
 
@@ -32,7 +32,7 @@ The current persistence recipes live in `org.hibernate.migration.recipes.jpa4`; 
 
 Conversion tests use the source project dependencies alongside OpenRewrite and the production recipes. The current example is the `conversionTestOrm80` suite. Tests check the transformation itself, including expected edits, unchanged unsupported inputs, comments, and skipped-migration diagnostics.
 
-The existing ORM suite demonstrates this model through its `ApiValidation` helper, which performs the full compilation-based check for fixtures using it:
+The existing ORM suite demonstrates this model through the `org.hibernate.migration.testing.ApiValidation` helper in that SourceSet, which performs the full compilation-based check for fixtures using it:
 
 . Compile the original Java against the selected source API environment.
 . Parse that Java with OpenRewrite using the same environment.
@@ -40,7 +40,11 @@ The existing ORM suite demonstrates this model through its `ApiValidation` helpe
 . Compile the emitted Java against the target API environment.
 . Reparse against the target API and run the recipe again to check idempotence.
 
+The `validateChangedJavaSourcesAfterRecipe` callback used by the concise `RewriteTest` examples sees only changed Java files. It does nothing for unchanged-only tests and cannot include unchanged supporting files. Use `ApiValidation.run` with complete inputs when compilation of unchanged fixtures or cross-file dependencies is part of the contract. Deliberately invalid or attribution-deficient fixtures use explicit raw-parser tests.
+
 Selecting the SourceSet does not automatically attach this helper to every test. Wire new applicable conversion tests into it explicitly. Deliberately invalid input tests and XML tests need their own appropriate assertions.
+
+Recipe-specific conversion suites own API validation and diagnostic cases. `TemporalDiagnosticsTest` checks reporting precedence and original coordinates; temporal runtime verification separates value contracts from persistence and isolates reflection in a fixture-access helper.
 
 This suite also checks recipe discovery from the built JAR and exclusion of test classes from that artifact. Target compilation uses an explicit target classpath; do not replace the source parser classpath with the target API simply to make output compile.
 

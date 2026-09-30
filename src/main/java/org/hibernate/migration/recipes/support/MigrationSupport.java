@@ -1,11 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-package org.hibernate.migration.recipes.jpa4;
+package org.hibernate.migration.recipes.support;
 
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.jspecify.annotations.NonNull;
 import org.openrewrite.*;
 import org.openrewrite.java.JavaIsoVisitor;
-import org.openrewrite.java.JavaPrinter;
 import org.openrewrite.java.tree.*;
 
 import java.util.*;
@@ -18,7 +17,7 @@ import java.util.*;
 ///
 /// @author Jennifer Joby
 /// @author Steve Ebersole
-final class MigrationSupport {
+public final class MigrationSupport {
     private MigrationSupport() {}
 
     /// Combines comments in argument order while retaining the first space's whitespace.
@@ -26,7 +25,7 @@ final class MigrationSupport {
     /// @param first the space whose whitespace and initial comments are retained
     /// @param remaining spaces supplying additional comments, without their whitespace
     /// @return a space containing all supplied comments, without deduplication
-    static Space comments(Space first, Space... remaining) {
+    public static Space comments(Space first, Space... remaining) {
         List<Comment> comments = new ArrayList<>(first.getComments());
         for (Space space : remaining) comments.addAll(space.getComments());
         return first.withComments(comments);
@@ -42,7 +41,7 @@ final class MigrationSupport {
     /// @param fqn the fully qualified annotation name
     /// @param cu the compilation unit supplying imports
     /// @return whether the spelling and imports explicitly identify the requested name
-    static boolean explicitType(J.Annotation annotation, String fqn, J.CompilationUnit cu) {
+    public static boolean explicitType(J.Annotation annotation, String fqn, J.CompilationUnit cu) {
         String spelling = annotation.getAnnotationType().printTrimmed();
         if (fqn.equals(spelling)) {
             return true;
@@ -63,7 +62,7 @@ final class MigrationSupport {
     /// @param source the source text used to calculate the offset
     /// @param offset the UTF-16 offset, between zero and the source length inclusive
     /// @return a two-element array containing the line followed by the column
-    static int[] position(String source, int offset) {
+    public static int[] position(String source, int offset) {
         int line = 1, column = 1;
         for (int i = 0; i < offset; i++) {
             if (source.charAt(i) == '\n') { line++; column = 1; }
@@ -88,7 +87,7 @@ final class MigrationSupport {
     /// @param subject the annotation, method, or XML root requiring review
     /// @param reason the stable reason code
     /// @param message the explanation for manual review
-    static void report(
+    public static void report(
             SkippedMigrations table,
             Recipe recipe,
             Cursor cursor,
@@ -114,19 +113,18 @@ final class MigrationSupport {
     /// node offsets by tree ID. Subclasses can report unchanged candidates using
     /// those positions even after earlier visits have modified surrounding code.
     /// The input may already include changes from earlier recipes in a composite.
-    abstract static class JavaVisitor extends JavaIsoVisitor<ExecutionContext> {
+    public abstract static class JavaVisitor extends JavaIsoVisitor<ExecutionContext> {
         private final Recipe recipe;
         private final SkippedMigrations table;
         /// The current compilation unit as received by this leaf visitor.
         protected J.CompilationUnit input;
-        private final Map<UUID, Integer> offsets = new HashMap<>();
-        private String source;
+        private SourcePositions positions;
 
         /// Creates a visitor that reports skipped candidates on behalf of the leaf recipe.
         ///
         /// @param recipe the recipe supplying the report identifier
         /// @param table the table receiving skipped-candidate rows
-        JavaVisitor(Recipe recipe, SkippedMigrations table) { this.recipe = recipe; this.table = table; }
+        protected JavaVisitor(Recipe recipe, SkippedMigrations table) { this.recipe = recipe; this.table = table; }
 
         /// Captures incoming source text and node offsets before delegating traversal.
         ///
@@ -136,16 +134,7 @@ final class MigrationSupport {
         @Override
         public J.@NonNull CompilationUnit visitCompilationUnit(J.@NonNull CompilationUnit cu, @NonNull ExecutionContext ctx) {
             input = cu;
-            offsets.clear();
-            PrintOutputCapture<Integer> out = new PrintOutputCapture<>(0);
-            new JavaPrinter<Integer>() {
-                @Override
-                protected void beforeSyntax(@NonNull J j, Space.@NonNull Location loc, @NonNull PrintOutputCapture<Integer> p) {
-                    super.beforeSyntax(j, loc, p);
-                    offsets.putIfAbsent(j.getId(), p.getOut().length());
-                }
-            }.visit(cu, out);
-            source = out.getOut();
+            positions = SourcePositions.capture(cu);
             return super.visitCompilationUnit(cu, ctx);
         }
 
@@ -161,9 +150,7 @@ final class MigrationSupport {
         /// @param message the explanation for manual review
         /// @throws IllegalStateException if no incoming position exists for the candidate
         protected void skip(J candidate, ExecutionContext ctx, String subject, String reason, String message) {
-            Integer offset = offsets.get(candidate.getId());
-            if (offset == null) throw new IllegalStateException("Missing original candidate position: " + subject);
-            report(table, recipe, getCursor(), ctx, input, candidate, position(source, offset), subject, reason, message);
+            report(table, recipe, getCursor(), ctx, input, candidate, positions.position(candidate.getId()), subject, reason, message);
         }
 
         /// Matches an annotation by resolved type and reports explicitly spelled but

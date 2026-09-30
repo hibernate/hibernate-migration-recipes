@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 package org.hibernate.migration.recipes.jpa4;
 
+import org.hibernate.migration.testing.ApiValidation;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import java.util.Map;
@@ -15,7 +17,8 @@ class RuntimeFixtureTest {
         var result = ApiValidation.run(ApiValidation.composite("org.hibernate.migration.recipes.jpa4"), Map.of("fixture/Migrated.java", input), api);
         assertTrue(result.skipped().isEmpty());
         String output = result.files().get("fixture/Migrated.java");
-        assertEquals(4, HardeningTest.occurrences(output, "@NamedStatement("));
-        assertEquals(3, HardeningTest.occurrences(output, "@NamedNativeStatement("));
+        assertEquals(4, occurrences(output, "@NamedStatement("));
+        assertEquals(3, occurrences(output, "@NamedNativeStatement("));
     }
+    private static int occurrences(String s, String part) { return (s.length() - s.replace(part, "").length()) / part.length(); }
 }

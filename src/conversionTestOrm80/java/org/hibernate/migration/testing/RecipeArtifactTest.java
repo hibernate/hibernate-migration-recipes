@@ -40,13 +40,15 @@ class RecipeArtifactTest {
             var environment = Environment.builder().scanJar(path, List.of(), loader).build();
             var names = environment.listRecipes().stream().map( Recipe::getName ).toList();
             for (String simple : List.of("MigrateNamedQueryToStatement", "MigrateMapKeyNameToValue", "MigrateEntityManagerGetDelegate", "MigrateTemporalAnnotation", "UpdatePersistenceXmlVersion")) {
-                String name = "org.hibernate.migration.recipes.jpa4." + simple;
+                String recipePackage = simple.equals("MigrateTemporalAnnotation") ? "temporal" : "jpa4";
+                String name = "org.hibernate.migration.recipes." + recipePackage + "." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
             for (String name : List.of("jpa4", "orm80")) assertFalse(environment.activateRecipes("org.hibernate.migration.recipes." + name).getRecipeList().isEmpty());
+            assertFalse(names.contains("org.hibernate.migration.recipes.jpa4.MigrateTemporalAnnotation"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateJpa3To4"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateHibernateOrm7To8"));
         }

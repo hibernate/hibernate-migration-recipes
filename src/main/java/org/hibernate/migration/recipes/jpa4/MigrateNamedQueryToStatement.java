@@ -1,5 +1,7 @@
 package org.hibernate.migration.recipes.jpa4;
 
+import org.hibernate.migration.recipes.support.MigrationSupport;
+
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.jspecify.annotations.NonNull;
 import org.openrewrite.*;

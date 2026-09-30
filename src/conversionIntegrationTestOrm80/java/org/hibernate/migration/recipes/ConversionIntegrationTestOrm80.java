@@ -31,7 +31,7 @@ class ConversionIntegrationTestOrm80 {
         var environments = ValidationEnvironment.configured();
         var context = environments.primary();
         return FixtureBundle.validate(Path.of(System.getProperty("transformedFixtures")), context.migration(), context.target(),
-                FixtureBundle.catalog(context.migration()), environments).stream();
+                FixtureBundle.catalog(context.migration()), environments).stream().filter(entry -> entry.scenario().equals("hibernate"));
     }
 
     void boot(FixtureBundle.Entry entry) throws Exception {
