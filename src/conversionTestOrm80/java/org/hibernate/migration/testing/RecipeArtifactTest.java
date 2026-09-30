@@ -46,13 +46,16 @@ class RecipeArtifactTest {
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
-            for (String simple : List.of("MigrateMappingXml")) {
+            for (String simple : List.of("MigrateMappingXml", "MigrateQueryFlushMode")) {
                 String name = "org.hibernate.migration.recipes.orm80." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
             }
             assertFalse(names.contains("org.hibernate.migration.recipes.jpa4.MigratePersistencePackageDescriptors"));
+            String flushRecipe = "org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode";
+            assertTrue(environment.activateRecipes("org.hibernate.migration.recipes.orm80")
+                    .getRecipeList().stream().anyMatch(recipe -> recipe.getName().equals(flushRecipe)));
             assertFalse(names.contains("org.hibernate.migration.recipes.orm80.MigrateMappingXmlComments"));
             for (String name : List.of("jpa4", "orm80")) assertFalse(environment.activateRecipes("org.hibernate.migration.recipes." + name).getRecipeList().isEmpty());
             assertFalse(names.contains("org.hibernate.migration.recipes.jpa4.MigrateTemporalAnnotation"));

@@ -6,7 +6,9 @@ description: >-
   Migrates Hibernate ORM 7.4 usage to ORM 8.0.
   Includes the JPA 3.x to 4.0 migration, upgrades Hibernate mapping XML
   from schema 7.0 to 8.0, migrates table and column comments, and removes
-  the ignored many-to-many orphan-removal attribute.
+  the ignored many-to-many orphan-removal attribute, and replaces Hibernate's
+  QueryFlushMode enum with Jakarta Persistence's QueryFlushMode.
 recipeList:
   - org.hibernate.migration.recipes.jpa4
   - org.hibernate.migration.recipes.orm80.MigrateMappingXml
+  - org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode

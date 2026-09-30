@@ -13,9 +13,16 @@ Individual recipes live in `org.hibernate.migration.recipes.jpa4`:
 * `MigrateEntityManagerGetDelegate`
 * `MigrateMapKeyNameToValue`
 
-Hibernate-specific XML recipes live in `org.hibernate.migration.recipes.orm80`:
+Hibernate-specific recipes live in `org.hibernate.migration.recipes.orm80`:
 
 * `MigrateMappingXml`
+* `MigrateQueryFlushMode`
+
+`MigrateQueryFlushMode` replaces Java references to `org.hibernate.query.QueryFlushMode`
+with `jakarta.persistence.QueryFlushMode`, including static imports, declarations,
+and named-query annotation values. The constants `FLUSH`, `NO_FLUSH`, and `DEFAULT`
+and existing query method calls are preserved. It does not convert other flush-mode
+enums or class names in strings.
 
 See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces, versions, package descriptors, and comment handling.
 
