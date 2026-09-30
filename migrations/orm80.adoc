@@ -3,14 +3,21 @@
 Select `org.hibernate.migration.recipes.orm80` for the aggregate ORM upgrade. This unreleased project currently provides these groupings:
 
 * `org.hibernate.migration.recipes.jpa4`: JPA 3.x to 4.0 for Hibernate applications.
-* `org.hibernate.migration.recipes.orm80`: ORM 7.4 to 8.0; currently delegates to the JPA grouping.
+* `org.hibernate.migration.recipes.orm80`: ORM 7.4 to 8.0; includes the JPA grouping plus Hibernate mapping XML migration, including version updates and comments.
 
 Individual recipes live in `org.hibernate.migration.recipes.jpa4`:
 
 * `MigrateNamedQueryToStatement`
-* `UpdatePersistenceXmlVersion`
+* `MigratePersistenceXml`
+* `MigrateOrmXml`
 * `MigrateEntityManagerGetDelegate`
 * `MigrateMapKeyNameToValue`
+
+Hibernate-specific XML recipes live in `org.hibernate.migration.recipes.orm80`:
+
+* `MigrateMappingXml`
+
+See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces, versions, package descriptors, and comment handling.
 
 For example, select `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue` to run only that conversion. The previous package and grouping names have been replaced; there are no compatibility aliases.
 

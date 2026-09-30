@@ -1,0 +1,78 @@
+= XML descriptor migrations
+
+The recipes identify XML by root element and namespace. Filenames such as `persistence.xml`, `orm.xml`, and `mapping.xml` are conventions, not selection rules. Custom filenames work; unrelated XML is ignored.
+
+== One recipe per schema family
+
+[cols="1,2,1,2",options="header"]
+|===
+|Descriptor |Root namespace |Version update |Recipe
+|JPA persistence
+|`https://jakarta.ee/xml/ns/persistence`
+|3.0, 3.1, 3.2 -> 4.0
+|`org.hibernate.migration.recipes.jpa4.MigratePersistenceXml`
+|JPA entity mappings
+|`https://jakarta.ee/xml/ns/persistence/orm`
+|3.0, 3.1, 3.2 -> 4.0
+|`org.hibernate.migration.recipes.jpa4.MigrateOrmXml`
+|Hibernate entity mappings
+|`http://www.hibernate.org/xsd/orm/mapping`
+|7.0 -> 8.0
+|`org.hibernate.migration.recipes.orm80.MigrateMappingXml`
+|===
+
+JPA persistence descriptors have a `persistence` root; both mapping families have an `entity-mappings` root. Namespace prefixes may vary.
+
+Each recipe updates its document’s content together with the root `version` and the matching canonical `xsi:schemaLocation` pair when present. Missing schema locations are not added. Unrelated schema pairs and formatting are preserved. Hibernate schema locations may use HTTP or HTTPS; the existing scheme is retained. Its namespace remains HTTP.
+
+Unsupported or missing versions, conflicting schema metadata, and noncanonical matching schema URLs are left unchanged and reported through `SkippedMigrations`. Older Java EE namespaces, Hibernate mapping schema 3.1.0, and legacy hbm.xml are outside this migration. These recipes cover the changes described below; they are not general validators or converters for every schema difference.
+
+== JPA package descriptors
+
+`org.hibernate.migration.recipes.jpa4.MigratePersistenceXml` converts explicit dot-separated package references:
+
+[source,xml]
+----
+<class>com.acme.model.package-info</class>
+----
+
+becomes:
+
+[source,xml]
+----
+<package-descriptor>com.acme.model</package-descriptor>
+----
+
+Generated package descriptors follow all ordinary `class` entries in the persistence unit, before later schema elements. Ordinary classes remain unchanged. An equivalent existing descriptor prevents a duplicate from being generated. Package matching and duplicate detection are scoped to each persistence unit. A skipped candidate in any unit leaves the entire document unchanged.
+
+Slash-separated paths, missing package names, `.class` suffixes, and ambiguous content remain unchanged with `XML_PACKAGE_DESCRIPTOR_UNSUPPORTED` diagnostics. This recipe does not infer packages from ordinary class names. It also handles supported descriptors already marked as version 4.0.
+
+== Hibernate mapping comments
+
+`org.hibernate.migration.recipes.orm80.MigrateMappingXml` moves unqualified comment attributes to child elements:
+
+[source,xml]
+----
+<table name="books" comment="Books &amp; editions"/>
+----
+
+becomes:
+
+[source,xml]
+----
+<table name="books"><comment>Books &amp; editions</comment></table>
+----
+
+This applies to schema-defined uses of `table`, `secondary-table`, `collection-table`, `join-table`, `table-generator`, `column`, and `join-column` types, including aliases such as `inverse-join-column`. Matching includes the enclosing schema context and namespaces. JPA mapping comments and arbitrary elements with the same local names are not converted.
+
+Comment elements are placed in the order required by schema 8.0. Text values are preserved after XML attribute normalization, with XML escaping applied once. Empty values are supported. XML comments and unrelated child elements are retained.
+
+If one existing comment child has the same semantic value, only the redundant attribute is removed. Different values, multiple existing comment children, duplicate comment attributes, and unresolved entity values remain unchanged with `XML_COMMENT_CONFLICT` diagnostics. Any such conflict leaves the entire document unchanged, including its version and schema reference. The recipe also handles version 8.0 documents containing legacy comment attributes.
+
+== Recipe composition and review
+
+The `org.hibernate.migration.recipes.jpa4` composite registers `MigratePersistenceXml` and `MigrateOrmXml` once each. The `org.hibernate.migration.recipes.orm80` composite includes that JPA migration and registers `MigrateMappingXml` once.
+
+Each family has one selectable recipe that checks eligibility once, transforms supported content, and updates version/schema metadata in the same visitor. Persistence package descriptors and Hibernate comments are not separate recipes. A content conflict cancels all changes to that document and is reported in `SkippedMigrations`; other documents remain eligible. This also applies to documents already carrying the target version. Re-running a successful migration makes no further changes.
+
+Conversion tests validate source and target descriptors against schemas from the pinned published ORM artifacts. Runtime tests verify package annotation discovery and table/column comment metadata using actual recipe output.

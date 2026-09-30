@@ -4,7 +4,8 @@ name: org.hibernate.migration.recipes.orm80
 displayName: Migrate from Hibernate ORM 7.4 to 8.0
 description: >-
   Migrates Hibernate ORM 7.4 usage to ORM 8.0.
-  Currently wraps the JPA 3.x to 4.0 migration recipe;
-  additional ORM-specific migrations will be added here.
+  Includes the JPA 3.x to 4.0 migration, upgrades Hibernate mapping XML
+  from schema 7.0 to 8.0, and migrates table and column comments.
 recipeList:
   - org.hibernate.migration.recipes.jpa4
+  - org.hibernate.migration.recipes.orm80.MigrateMappingXml

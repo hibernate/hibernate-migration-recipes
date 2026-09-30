@@ -13,11 +13,11 @@ import static org.openrewrite.xml.Assertions.xml;
 
 /// Regression coverage for the migration recipe.
 /// @author Steve Ebersole
-class UpdatePersistenceXmlVersionTest implements RewriteTest {
+class MigratePersistenceXmlTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new UpdatePersistenceXmlVersion());
+        spec.recipe(new MigratePersistenceXml());
     }
 
     @DocumentExample

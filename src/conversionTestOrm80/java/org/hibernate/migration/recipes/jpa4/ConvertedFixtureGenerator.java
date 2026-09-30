@@ -19,6 +19,7 @@ public final class ConvertedFixtureGenerator {
         var context = environments.primary();
         var entries = FixtureBundle.catalog(context.migration());
         FixtureBundle.publish(Path.of(System.getProperty("transformedFixtures")), context.migration(), context.target(), entries, environments, entry -> {
+            if (entry.scenario().startsWith("xml-")) return XmlRuntimeFixtures.convert(entry);
             org.openrewrite.Recipe recipe;
             Map<String, String> sources;
             if (entry.fixture().equals("runtime")) {

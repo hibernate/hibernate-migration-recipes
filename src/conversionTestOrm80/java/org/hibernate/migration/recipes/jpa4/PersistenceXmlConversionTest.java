@@ -31,7 +31,7 @@ class PersistenceXmlConversionTest {
         for (String recipe : List.of("leaf", "org.hibernate.migration.recipes.jpa4", "org.hibernate.migration.recipes.orm80")) {
             String input = "<?xml version=\"1.0\"?>\r\n<!-- keep -->\r\n<p:persistence xmlns:p=\"" + NS + "\" xmlns:s=\"" + XSI + "\" version=\"" + version + "\" s:schemaLocation=\"urn:other  other.xsd\n  " + NS + "\t" + NS + "/persistence_" + version.replace('.', '_') + ".xsd  \">\r\n<p:persistence-unit name=\"demo\"/>\r\n</p:persistence>";
             validate(input, version);
-            var result = run(recipe.equals("leaf") ? new UpdatePersistenceXmlVersion() : ApiValidation.composite(recipe), input);
+            var result = run(recipe.equals("leaf") ? new MigratePersistenceXml() : ApiValidation.composite(recipe), input);
             assertEquals(input.replace("version=\"" + version + "\"", "version=\"4.0\"").replace("persistence_" + version.replace('.', '_') + ".xsd", "persistence_4_0.xsd"), result.text);
             assertTrue(result.rows.isEmpty());
             validate(result.text, "4.0");
@@ -41,7 +41,7 @@ class PersistenceXmlConversionTest {
     @Test void missingSchemaIsNotInvented() throws Exception {
         String input = "<persistence xmlns=\"" + NS + "\" version=\"3.2\"><persistence-unit name=\"demo\"/></persistence>";
         validate(input, "3.2");
-        String output = run(new UpdatePersistenceXmlVersion(), input).text;
+        String output = run(new MigratePersistenceXml(), input).text;
         assertEquals(input.replace("3.2", "4.0"), output);
         validate(output, "4.0");
     }
@@ -49,7 +49,7 @@ class PersistenceXmlConversionTest {
     @Test void unrelatedSchemaPairsAndForeignAttributesArePreserved() {
         for (String attributes : List.of("s:schemaLocation=\"urn:other other.xsd\"", "xmlns:o=\"urn:other\" o:schemaLocation=\"custom\"")) {
             String input = root("3.2", attributes);
-            var result = run(new UpdatePersistenceXmlVersion(), input);
+            var result = run(new MigratePersistenceXml(), input);
             assertEquals(input.replace("version=\"3.2\"", "version=\"4.0\""), result.text);
             assertTrue(result.rows.isEmpty());
         }
@@ -72,7 +72,7 @@ class PersistenceXmlConversionTest {
         cases.put(root("3.2", "schemaLocation=\"custom.xsd\""), "XML_SCHEMA_CONFLICT");
         for (var entry : cases.entrySet()) {
             String input = "<!--original-->\n" + entry.getKey();
-            var result = run(new UpdatePersistenceXmlVersion(), input);
+            var result = run(new MigratePersistenceXml(), input);
             assertEquals(input, result.text);
             assertEquals(1, result.rows.size());
             assertEquals(entry.getValue(), result.rows.getFirst().getReasonCode(), input);
@@ -81,7 +81,7 @@ class PersistenceXmlConversionTest {
             assertEquals("config/custom.xml", result.rows.getFirst().getSourcePath());
         }
         for (String input : List.of("<unrelated version=\"3.2\"/>", root("4.0", ""), "<wrapper>" + root("3.2", "") + "</wrapper>")) {
-            var result = run(new UpdatePersistenceXmlVersion(), input);
+            var result = run(new MigratePersistenceXml(), input);
             assertEquals(input, result.text);
             assertTrue(result.rows.isEmpty());
         }

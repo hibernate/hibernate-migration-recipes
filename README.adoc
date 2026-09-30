@@ -14,6 +14,7 @@ Select a recipe by its identifier, not its YAML filename. A composite recipe gro
 
 * link:migrations/orm80.adoc[Hibernate ORM 7.4 to 8.0]
 * link:migrations/temporal-annotation.adoc[Modernize @Temporal mappings]
+* link:migrations/xml-descriptors.adoc[XML descriptor migrations]
 
 == Reviewing skipped migrations
 
