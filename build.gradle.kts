@@ -14,6 +14,8 @@ dependencies {
     implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:$rewriteBomVersion"))
     implementation("org.openrewrite:rewrite-java")
     implementation("org.openrewrite:rewrite-xml")
+    implementation("org.openrewrite:rewrite-groovy")
+    implementation("org.openrewrite:rewrite-kotlin")
     runtimeOnly("org.openrewrite:rewrite-java-17")
     runtimeOnly("org.openrewrite:rewrite-java-21")
     testImplementation("org.openrewrite:rewrite-test")

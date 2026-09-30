@@ -47,7 +47,7 @@ class RecipeArtifactTest {
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
-            for (String simple : List.of("MigrateMappingXml", "MigrateQueryFlushMode", "MigrateFindMultipleOptions")) {
+            for (String simple : List.of("MigrateMappingXml", "MigrateQueryFlushMode", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption")) {
                 String name = "org.hibernate.migration.recipes.orm80." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
@@ -67,7 +67,8 @@ class RecipeArtifactTest {
                     "org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue",
                     "org.hibernate.migration.recipes.orm80.MigrateMappingXml",
                     "org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode",
-                    "org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions"
+                    "org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions",
+                    "org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption"
             ), environment.activateRecipes("org.hibernate.migration.recipes.orm80").getRecipeList().stream().map(Recipe::getName).toList());
             assertFalse(names.contains("org.hibernate.migration.recipes.jpa4.MigrateTemporalAnnotation"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateJpa3To4"));

@@ -32,6 +32,7 @@ Hibernate-specific recipes live in `org.hibernate.migration.recipes.orm80`:
 * `MigrateMappingXml`
 * `MigrateQueryFlushMode`
 * `MigrateFindMultipleOptions`
+* `MigrateClientEnhancementOption`
 
 `MigrateQueryFlushMode` replaces Java references to `org.hibernate.query.QueryFlushMode`
 with `jakarta.persistence.QueryFlushMode`, including static imports, declarations,
@@ -57,6 +58,55 @@ See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces,
 For example, select `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue` to run only that conversion. The former `org.hibernate.migration.recipes.jpa4` aggregate has been removed; select `org.hibernate.migration.recipes.orm80` instead. Individual recipe identifiers are unchanged. The previous package and grouping names have been replaced; there are no compatibility aliases.
 
 These recipes do not upgrade dependency coordinates. Java matching requires the application's source JPA API on the parser classpath.
+
+== Client enhancement option in build files
+
+`MigrateClientEnhancementOption` renames `enableExtendedEnhancement` to
+`enableClientEnhancement` in supported Gradle, Maven, and Ant configuration.
+It is included in `orm80` and can also be selected independently. Its independently
+selectable leaves are `MigrateGradleClientEnhancementOption`,
+`MigrateMavenClientEnhancementOption`, and `MigrateAntClientEnhancementOption`,
+all in `org.hibernate.migration.recipes.orm80`.
+
+If only the old option exists, its value or expression is preserved. If both options
+exist in one supported configuration, the new option wins, including explicit
+`false`, and the obsolete setting is removed. Comments are retained.
+
+* Gradle: Groovy `build.gradle` and Kotlin `build.gradle.kts` scripts with canonical
+  `hibernate { enhancement { ... } }` blocks. The script must explicitly apply
+  `org.hibernate.orm`, or the parser must attribute the Hibernate receiver. Direct
+  assignments and `.set(...)` statements, including `this` qualification, are
+  supported. Duplicate writes, multiple enhancement blocks, conditional/nested
+  writes, legacy reads, and unsupported setters require review. When both names
+  occur, the old value must be a boolean literal: removing an arbitrary expression
+  could discard side effects. Cross-project configuration, convention plugins,
+  imported scripts, and arbitrary receiver aliases are outside initial support.
+* Maven: Direct option elements in plugin and execution configurations, including
+  `pluginManagement` and profiles, for `org.hibernate.orm:hibernate-maven-plugin`,
+  `org.hibernate.orm:hibernate-enhance-maven-plugin`, and
+  `org.hibernate:hibernate-enhance-maven-plugin`. Old-only settings are skipped when
+  a parent or another scope for the same plugin could supply the new option.
+  Same-block conflict cleanup is supported even with a parent. Duplicate elements,
+  configuration merge directives, nested element values, and unresolved plugin
+  identity require review. Parent POMs and profile activation are not evaluated.
+* Ant: Unnamespaced project documents with an explicit same-document `taskdef`
+  whose classname is `org.hibernate.tool.enhance.EnhancementTask`. Arbitrary literal
+  task aliases and property-valued attributes are supported. Conditional, dynamic,
+  competing, imported, resource-based, namespaced, or macro-based task configuration
+  requires manual review.
+
+Recognized skipped candidates use `SkippedMigrations` with reason codes
+`ENHANCEMENT_IDENTITY_UNRESOLVED`, `ENHANCEMENT_CONFIGURATION_AMBIGUOUS`,
+`ENHANCEMENT_INHERITANCE_UNRESOLVED`, or `ENHANCEMENT_SYNTAX_UNSUPPORTED`.
+Unrelated options are not changed. No dependency, plugin, or task-class upgrades
+are performed by this recipe.
+
+The build script running Rewrite itself is eligible. Run build validation in a
+separate invocation after applying changes so the updated configuration is evaluated.
+The enhancement migration is tested through structured parsing, exact output
+assertions, recipe discovery, diagnostics, and fresh-parser idempotence across the
+supported build formats. Target Hibernate tooling execution is not covered by those
+checks; the chosen tooling release must expose `enableClientEnhancement`.
 
 == Limitations and optional migrations
 
