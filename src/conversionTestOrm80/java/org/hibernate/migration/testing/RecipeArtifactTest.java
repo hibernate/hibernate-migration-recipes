@@ -17,7 +17,7 @@ class RecipeArtifactTest {
         Path path = Path.of(System.getProperty("recipeJar"));
         try (ZipFile jar = new ZipFile(path.toFile())) {
             var names = jar.stream().map( ZipEntry::getName ).toList();
-            assertTrue(names.contains("META-INF/rewrite/jpa4.yml"));
+            assertFalse(names.contains("META-INF/rewrite/jpa4.yml"));
             assertTrue(names.contains("META-INF/rewrite/orm80.yml"));
             for (String name : names) {
                 assertFalse(name.contains("/testing/"), name);
@@ -58,7 +58,16 @@ class RecipeArtifactTest {
             assertTrue(environment.activateRecipes("org.hibernate.migration.recipes.orm80")
                     .getRecipeList().stream().anyMatch(recipe -> recipe.getName().equals(flushRecipe)));
             assertFalse(names.contains("org.hibernate.migration.recipes.orm80.MigrateMappingXmlComments"));
-            for (String name : List.of("jpa4", "orm80")) assertFalse(environment.activateRecipes("org.hibernate.migration.recipes." + name).getRecipeList().isEmpty());
+            assertFalse(names.contains("org.hibernate.migration.recipes.jpa4"));
+            assertEquals(List.of(
+                    "org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement",
+                    "org.hibernate.migration.recipes.jpa4.MigratePersistenceXml",
+                    "org.hibernate.migration.recipes.jpa4.MigrateOrmXml",
+                    "org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate",
+                    "org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue",
+                    "org.hibernate.migration.recipes.orm80.MigrateMappingXml",
+                    "org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode"
+            ), environment.activateRecipes("org.hibernate.migration.recipes.orm80").getRecipeList().stream().map(Recipe::getName).toList());
             assertFalse(names.contains("org.hibernate.migration.recipes.jpa4.MigrateTemporalAnnotation"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateJpa3To4"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateHibernateOrm7To8"));

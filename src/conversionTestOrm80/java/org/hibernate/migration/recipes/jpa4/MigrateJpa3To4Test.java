@@ -19,7 +19,7 @@ class MigrateJpa3To4Test implements RewriteTest {
     public void defaults(RecipeSpec spec) {
         ApiValidation.validateChangedJavaSourcesAfterRecipe(spec);
         spec
-                .recipeFromResources("org.hibernate.migration.recipes.jpa4")
+                .recipeFromResources("org.hibernate.migration.recipes.orm80")
                 .parser(JavaParser.fromJavaVersion()
                         .logCompilationWarningsAndErrors(true)
                         .classpath("jakarta.persistence-api"));

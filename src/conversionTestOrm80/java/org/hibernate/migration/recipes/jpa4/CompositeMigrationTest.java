@@ -3,8 +3,6 @@ package org.hibernate.migration.recipes.jpa4;
 import org.hibernate.migration.testing.ApiValidation;
 import org.hibernate.migration.testing.MigrationSources;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import java.util.*;
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.openrewrite.*;
@@ -16,9 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /// Checks composite selection and reporting, including deliberately stripped attribution.
 /// @author Steve Ebersole
 class CompositeMigrationTest {
-    @ParameterizedTest
-    @ValueSource(strings = {"org.hibernate.migration.recipes.jpa4", "org.hibernate.migration.recipes.orm80"})
-    void compositesKeepTemporalAndUnrelatedCode(String name) {
+    @Test
+    void compositeKeepsTemporalAndUnrelatedCode() {
         String path = "fixture/jpa4/compositemigration/compositeskeeptemporalandunrelatedcode/Example.java";
         String unrelatedPath = "fixture/jpa4/compositemigration/compositeskeeptemporalandunrelatedcode/unrelated/Other.java";
         var sources = MigrationSources.configured().files(path, unrelatedPath);
@@ -26,7 +23,7 @@ class CompositeMigrationTest {
         String temporal = source.substring(source.indexOf("@Temporal(DATE)"), source.indexOf("@MapKey"));
         String unrelated = sources.get(unrelatedPath);
         for (String api : List.of("orm74", "jpa30", "jpa31", "jpa32")) {
-            var result = ApiValidation.run(ApiValidation.composite(name), sources, api);
+            var result = ApiValidation.run(ApiValidation.composite("org.hibernate.migration.recipes.orm80"), sources, api);
             assertTrue(result.files().get(path).contains(temporal));
             assertEquals(unrelated, result.files().get(unrelatedPath));
             assertTrue(result.files().get(path).contains("unwrap(java.lang.Object.class)"), api);
@@ -53,7 +50,7 @@ class CompositeMigrationTest {
             @Override public J.Annotation visitAnnotation(J.Annotation a, Integer p) { return super.visitAnnotation(a, p).withType(null); }
             @Override public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, Integer p) { return super.visitMethodInvocation(m, p).withMethodType(null).withName(m.getName().withType(null)); }
         }.visit(parsed, 0);
-        var recipe = ApiValidation.composite("org.hibernate.migration.recipes.jpa4");
+        var recipe = ApiValidation.composite("org.hibernate.migration.recipes.orm80");
         for (int attempt = 0; attempt < 2; attempt++) {
             var run = recipe.run(new InMemoryLargeSourceSet(List.of(stripped)), new InMemoryExecutionContext(t -> fail(t)));
             assertEquals(0, run.getChangeset().size());

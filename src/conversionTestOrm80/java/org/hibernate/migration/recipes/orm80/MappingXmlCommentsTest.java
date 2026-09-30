@@ -35,7 +35,6 @@ class MappingXmlCommentsTest {
         validate(result.text(), schemaPath("8.0"));
         String leaf = run(new MigrateMappingXml(), input).text();
         assertEquals(result.text(), leaf);
-        assertEquals(input, run(composite("jpa4"), input).text());
     }
 
     @Test void namespaceAliasesAndEscapingPreserveSemanticText() throws Exception {

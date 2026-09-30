@@ -23,9 +23,13 @@ In the paths above, <Migration> is a naming placeholder, such as Orm80, not a li
 
 Only `main.output` belongs in the production JAR. Keep validation utilities, fixture generators, and runtime test code in the test directories.
 
-=== Current ORM recipe organization
+=== Recipe organization
 
-The JPA 4 upgrade recipes and their migration-specific helpers live in `org.hibernate.migration.recipes.jpa4`. The independently selected temporal modernization recipe and its helpers live in `org.hibernate.migration.recipes.temporal`. Temporal conversion tests use matching Java packages within `conversionTestOrm80`; their SourceSet identifies the validation environment. User-facing migration guides live in `migrations/` and are linked from the README. Hibernate mapping XML recipes live in `org.hibernate.migration.recipes.orm80`, and shared XML support lives in `org.hibernate.migration.recipes.xml`. Version-independent recipe infrastructure, including `MigrationSupport` and `SourcePositions`, lives in `org.hibernate.migration.recipes.support`; shared reporting tables live in `org.hibernate.migration.recipes.table`. The public `org.hibernate.migration.recipes.orm80` composite includes `org.hibernate.migration.recipes.jpa4` and the Hibernate mapping XML recipes. These describe the current layout; they do not imply support for persistence providers other than Hibernate. See link:README.adoc[the README] for recipe selection and supported behavior.
+Recipes live in `src/main/java` under appropriate `org.hibernate.migration.recipes` sub-packages.
+
+`org.hibernate.migration.recipes.table` defines OpenRewrite datatable / diagnostic support.
+
+See link:README.adoc#_available-migrations[Available Migrations] for details about currently available migrations.
 
 == Conversion testing model
 

@@ -13,7 +13,7 @@ class RuntimeFixtureTest {
     @ParameterizedTest @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
     void validatesRuntimeFixture(String api) throws Exception {
         var sources = MigrationSources.configured().files("fixture/Migrated.java");
-        var result = ApiValidation.run(ApiValidation.composite("org.hibernate.migration.recipes.jpa4"), sources, api);
+        var result = ApiValidation.run(ApiValidation.composite("org.hibernate.migration.recipes.orm80"), sources, api);
         assertTrue(result.skipped().isEmpty());
         String output = result.files().get("fixture/Migrated.java");
         assertEquals(4, occurrences(output, "@NamedStatement("));

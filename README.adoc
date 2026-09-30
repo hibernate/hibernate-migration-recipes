@@ -10,11 +10,11 @@ See link:CONTRIBUTING.adoc[the contributor guide] for the project layout, custom
 
 Select a recipe by its identifier, not its YAML filename. A composite recipe groups related changes for an upgrade; individual recipes let you select specific conversions. Choose recipes for the Hibernate project and version you are upgrading.
 
+[[_available-migrations]]
 == Available migrations
 
 * link:migrations/orm80.adoc[Hibernate ORM 7.4 to 8.0]
 * link:migrations/temporal-annotation.adoc[Modernize @Temporal mappings]
-* link:migrations/xml-descriptors.adoc[XML descriptor migrations]
 
 == Reviewing skipped migrations
 

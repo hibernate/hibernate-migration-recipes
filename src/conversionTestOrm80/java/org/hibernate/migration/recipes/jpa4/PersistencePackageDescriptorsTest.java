@@ -25,7 +25,7 @@ class PersistencePackageDescriptorsTest {
                     <p:persistence-unit name="two"><p:class>com.acme.package-info</p:class></p:persistence-unit>
                     """);
             validate(input, schema(version));
-            for (Recipe recipe : List.of(new MigratePersistenceXml(), composite("jpa4"), composite("orm80"))) {
+            for (Recipe recipe : List.of(new MigratePersistenceXml(), composite("orm80"))) {
                 var result = run(recipe, input);
                 assertTrue(result.rows().isEmpty());
                 String xml = result.text();
@@ -68,7 +68,7 @@ class PersistencePackageDescriptorsTest {
                   <p:class><nested>com.acme.package-info</nested></p:class>
                 </p:persistence-unit>
                 """);
-        var result = run(composite("jpa4"), input);
+        var result = run(composite("orm80"), input);
         assertEquals(input, result.text());
         assertTrue(result.text().contains("<p:class>com/acme/package-info</p:class>"));
         assertEquals(4, result.rows().size());

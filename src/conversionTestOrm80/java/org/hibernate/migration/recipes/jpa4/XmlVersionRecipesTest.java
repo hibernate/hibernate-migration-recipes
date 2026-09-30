@@ -15,7 +15,6 @@ class XmlVersionRecipesTest {
         for (Descriptor d : List.of(Descriptor.ORM, Descriptor.MAPPING)) {
             for (String version : d.versions.stream().filter(v -> !v.equals(d.target)).toList()) {
                 List<Recipe> recipes = new ArrayList<>(List.of(leaf(d), composite("orm80")));
-                if (d == Descriptor.ORM) recipes.add(composite("jpa4"));
                 for (Recipe recipe : recipes) {
                     for (String scheme : d == Descriptor.MAPPING ? List.of("https:", "http:") : List.of("https:")) {
                         String schema = d.schema(version).replace("https:", scheme);

@@ -9,6 +9,10 @@ description: >-
   the ignored many-to-many orphan-removal attribute, and replaces Hibernate's
   QueryFlushMode enum with Jakarta Persistence's QueryFlushMode.
 recipeList:
-  - org.hibernate.migration.recipes.jpa4
+  - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
+  - org.hibernate.migration.recipes.jpa4.MigratePersistenceXml
+  - org.hibernate.migration.recipes.jpa4.MigrateOrmXml
+  - org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate
+  - org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue
   - org.hibernate.migration.recipes.orm80.MigrateMappingXml
   - org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode

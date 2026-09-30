@@ -1,6 +1,26 @@
 = XML descriptor migrations
 
+These conversions are included in the link:orm80.adoc[Hibernate ORM 7.4 to 8.0 migration]. This guide describes their behavior and how to select only the XML conversions.
+
 The recipes identify XML by root element and namespace. Filenames such as `persistence.xml`, `orm.xml`, and `mapping.xml` are conventions, not selection rules. Custom filenames work; unrelated XML is ignored.
+
+== Enabling with Gradle
+
+Selecting `org.hibernate.migration.recipes.orm80` already enables all three XML recipes. To run only XML conversions, with the OpenRewrite Gradle plugin applied and this project's recipe JAR added to the `rewrite` dependency configuration, use this in your application's `build.gradle`:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe("org.hibernate.migration.recipes.jpa4.MigratePersistenceXml")
+    activeRecipe("org.hibernate.migration.recipes.jpa4.MigrateOrmXml")
+    activeRecipe("org.hibernate.migration.recipes.orm80.MigrateMappingXml")
+    exportDatatables = true
+}
+----
+
+Keep only the `activeRecipe` entries for the conversions you want to run.
+Preview the changes with `./gradlew rewriteDryRun`, then apply them with `./gradlew rewriteRun`.
+See the https://docs.openrewrite.org/reference/gradle-plugin-configuration[OpenRewrite Gradle plugin documentation] for plugin and dependency setup.
 
 == One recipe per schema family
 
@@ -77,7 +97,7 @@ The attribute remains on `<one-to-many>` and `<one-to-one>`, where it is support
 
 == Recipe composition and review
 
-The `org.hibernate.migration.recipes.jpa4` composite registers `MigratePersistenceXml` and `MigrateOrmXml` once each. The `org.hibernate.migration.recipes.orm80` composite includes that JPA migration and registers `MigrateMappingXml` once.
+The `org.hibernate.migration.recipes.orm80` composite registers `MigratePersistenceXml`, `MigrateOrmXml`, and `MigrateMappingXml` once each.
 
 Each family has one selectable recipe that checks eligibility once, transforms supported content, and updates version/schema metadata in the same visitor. Persistence package descriptors and Hibernate comments are not separate recipes. A content conflict cancels all changes to that document and is reported in `SkippedMigrations`; other documents remain eligible. This also applies to documents already carrying the target version. Re-running a successful migration makes no further changes.
 

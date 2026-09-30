@@ -27,7 +27,7 @@ class PersistenceXmlConversionTest {
 
     @ParameterizedTest @ValueSource(strings = {"3.0", "3.1", "3.2"})
     void schemasAliasesAndUnrelatedMetadata(String version) throws Exception {
-        for (String recipe : List.of("leaf", "org.hibernate.migration.recipes.jpa4", "org.hibernate.migration.recipes.orm80")) {
+        for (String recipe : List.of("leaf", "org.hibernate.migration.recipes.orm80")) {
             String input = "<?xml version=\"1.0\"?>\r\n<!-- keep -->\r\n<p:persistence xmlns:p=\"" + NS + "\" xmlns:s=\"" + XSI + "\" version=\"" + version + "\" s:schemaLocation=\"urn:other  other.xsd\n  " + NS + "\t" + NS + "/persistence_" + version.replace('.', '_') + ".xsd  \">\r\n<p:persistence-unit name=\"demo\"/>\r\n</p:persistence>";
             validate(input, version);
             var result = run(recipe.equals("leaf") ? new MigratePersistenceXml() : ApiValidation.composite(recipe), input);

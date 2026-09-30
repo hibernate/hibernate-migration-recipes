@@ -57,7 +57,7 @@ class MappingXmlOrphanRemovalTest {
         assertEquals(input, run(new MigrateMappingXml(), input).text());
         String jpa = input.replace(NS, "https://jakarta.ee/xml/ns/persistence/orm").replace("version='8.0'", "version='4.0'");
         assertEquals(jpa, run(new MigrateMappingXml(), jpa).text());
-        assertEquals(jpa, run(composite("jpa4"), jpa).text());
+        assertEquals(jpa, run(composite("orm80"), jpa).text());
     }
 
     @Test void ineligibleMetadataAndContentConflictsCancelRemoval() {

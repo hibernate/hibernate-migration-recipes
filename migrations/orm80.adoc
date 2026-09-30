@@ -1,9 +1,23 @@
 = Hibernate ORM 7.4 to 8.0
 
-Select `org.hibernate.migration.recipes.orm80` for the aggregate ORM upgrade. This unreleased project currently provides these groupings:
+Select `org.hibernate.migration.recipes.orm80` for the aggregate ORM 7.4 to 8.0 upgrade. It includes JPA 3.x to 4.0 migration for Hibernate applications and Hibernate mapping XML migration, including version updates, comments, and removal of ignored many-to-many orphan removal.
 
-* `org.hibernate.migration.recipes.jpa4`: JPA 3.x to 4.0 for Hibernate applications.
-* `org.hibernate.migration.recipes.orm80`: ORM 7.4 to 8.0; includes the JPA grouping plus Hibernate mapping XML migration, including version updates and comments.
+== Enabling with Gradle
+
+With the OpenRewrite Gradle plugin applied and this project's recipe JAR added to the `rewrite` dependency configuration, add this to your application's `build.gradle`:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe("org.hibernate.migration.recipes.orm80")
+    exportDatatables = true
+}
+----
+
+Preview the changes with `./gradlew rewriteDryRun`, then apply them with `./gradlew rewriteRun`.
+See the https://docs.openrewrite.org/reference/gradle-plugin-configuration[OpenRewrite Gradle plugin documentation] for plugin and dependency setup.
+
+== Individual recipes
 
 Individual recipes live in `org.hibernate.migration.recipes.jpa4`:
 
@@ -26,13 +40,13 @@ enums or class names in strings.
 
 See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces, versions, package descriptors, and comment handling.
 
-For example, select `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue` to run only that conversion. The previous package and grouping names have been replaced; there are no compatibility aliases.
+For example, select `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue` to run only that conversion. The former `org.hibernate.migration.recipes.jpa4` aggregate has been removed; select `org.hibernate.migration.recipes.orm80` instead. Individual recipe identifiers are unchanged. The previous package and grouping names have been replaced; there are no compatibility aliases.
 
 These recipes do not upgrade dependency coordinates. Java matching requires the application's source JPA API on the parser classpath.
 
 == Limitations and optional migrations
 
-Neither grouping runs temporal conversion. See link:temporal-annotation.adoc[Modernize @Temporal mappings] for that independently selected migration.
+The aggregate does not run temporal conversion. See link:temporal-annotation.adoc[Modernize @Temporal mappings] for that independently selected migration.
 
 Named-query conversion supports literal UPDATE, DELETE, and INSERT operations and preserves query text. Constants, concatenations, CTEs, leading query comments, explicit incompatible annotation members, and conflicting target containers require review. Native statements with result clauses or unsupported quoting/multiple statements remain unchanged. This is a bounded lexical check, not validation of arbitrary HQL or SQL.
 
