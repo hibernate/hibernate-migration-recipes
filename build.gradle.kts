@@ -7,7 +7,7 @@ group = "org.hibernate.migration"
 version = "1.0-SNAPSHOT"
 repositories { mavenCentral() }
 
-val rewriteBomVersion = "3.37.0"
+val rewriteBomVersion = "3.38.0"
 val junitVersion = "6.1.3"
 
 dependencies {
