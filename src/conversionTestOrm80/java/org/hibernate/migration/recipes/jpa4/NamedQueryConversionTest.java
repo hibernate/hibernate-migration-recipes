@@ -173,6 +173,8 @@ class NamedQueryConversionTest {
         String path = "fixture/jpa4/namedqueryconversion/crlfconversionpreserveslineendings/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);
         String source = sourceFiles.get(path);
+        assertTrue(source.contains("\r\n"), "Fixture must contain CRLF line endings");
+        assertFalse(source.replace("\r\n", "").contains("\n"), "Fixture must not contain bare LF line endings");
         var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "jpa32");
         assertFalse(result.text().replace("\r\n", "").contains("\n"));
         assertTrue(result.skipped().isEmpty());
@@ -183,6 +185,8 @@ class NamedQueryConversionTest {
         String path = "fixture/jpa4/namedqueryconversion/identicalcandidatesatdifferentlocationsandcrlf/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);
         String source = sourceFiles.get(path);
+        assertTrue(source.contains("\r\n"), "Fixture must contain CRLF line endings");
+        assertFalse(source.replace("\r\n", "").contains("\n"), "Fixture must not contain bare LF line endings");
         var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "jpa32");
         assertEquals(source, result.text());
         assertEquals(List.of(5, 9), result.skipped().stream().map(r -> r.getLine()).sorted().toList());
