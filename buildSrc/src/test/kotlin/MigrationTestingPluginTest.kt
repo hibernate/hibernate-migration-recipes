@@ -27,7 +27,7 @@ class MigrationTestingPluginTest {
         val p = project(); configure(p); p.evaluate()
         assertFalse(p.state.failure != null, p.state.failure?.toString())
         val sets = p.extensions.getByType(JavaPluginExtension::class.java).sourceSets
-        assertEquals(setOf("main", "test", "conversionTestOrm80", "conversionIntegrationTestOrm80", "conversionTestOrm9", "conversionIntegrationTestOrm9"), sets.names)
+        assertEquals(setOf("main", "test", "migrationSourcesOrm80", "migrationSourcesOrm9", "conversionTestOrm80", "conversionIntegrationTestOrm80", "conversionTestOrm9", "conversionIntegrationTestOrm9"), sets.names)
         assertEquals(6, p.configurations.count { it.name.startsWith("ormEnvironment") })
         for (id in listOf("Orm80", "Orm9")) {
             val integration = p.tasks.getByName("conversionIntegrationTest$id")
@@ -36,6 +36,37 @@ class MigrationTestingPluginTest {
             assertFalse(generator.taskDependencies.getDependencies(generator).any { it is org.gradle.api.tasks.testing.Test })
         }
         assertTrue(p.configurations.getByName("conversionIntegrationTestOrm80Implementation").extendsFrom.isEmpty())
+    }
+    @Test fun `migration inputs compile separately and are tracked by both consumers`() {
+        val p = project(); configure(p)
+        val fixture = p.file("src/migrationSourcesOrm80/java/fixture/Example.java")
+        fixture.parentFile.mkdirs()
+        fixture.writeText("package fixture; class Example {}")
+        p.evaluate()
+        assertNull(p.state.failure)
+        val sets = p.extensions.getByType(JavaPluginExtension::class.java).sourceSets
+        for (id in listOf("Orm80", "Orm9")) {
+            val fixtures = sets.getByName("migrationSources$id")
+            val dependencies = p.configurations.getByName(fixtures.compileOnlyConfigurationName).dependencies
+            assertEquals(listOf("org.hibernate.orm:hibernate-core:1.0.0.Final"), dependencies.map { "${it.group}:${it.name}:${it.version}" })
+            assertTrue(p.configurations.getByName(fixtures.implementationConfigurationName).extendsFrom.isEmpty())
+            assertTrue(p.configurations.getByName(fixtures.implementationConfigurationName).dependencies.isEmpty())
+            for (name in listOf("conversionTest$id", "generateConvertedFixtures$id")) {
+                val consumer = p.tasks.getByName(name)
+                assertTrue(consumer.taskDependencies.getDependencies(consumer).any { it.name == fixtures.compileJavaTaskName })
+                val properties = when (consumer) {
+                    is org.gradle.api.tasks.testing.Test -> consumer.systemProperties
+                    is org.gradle.api.tasks.JavaExec -> consumer.systemProperties
+                    else -> error("Unexpected fixture consumer")
+                }
+                assertEquals(p.file("src/migrationSources$id/java").absolutePath, properties["migration.sources"])
+            }
+            if (id == "Orm80") assertTrue(fixtures.allJava.files.contains(fixture))
+            for (suite in listOf("conversionTest$id", "conversionIntegrationTest$id", "main")) {
+                val runtime = p.configurations.getByName(sets.getByName(suite).runtimeClasspathConfigurationName)
+                assertFalse(runtime.hierarchy.any { it.name.startsWith("migrationSources") })
+            }
+        }
     }
     @Test fun `unknown environment fails without resolution`() {
         val p = project(); configure(p)
@@ -54,6 +85,8 @@ class MigrationTestingPluginTest {
                 val compiler = p.tasks.getByName("compile${suite.replaceFirstChar { it.uppercaseChar() }}Java") as org.gradle.api.tasks.compile.JavaCompile
                 assertEquals(current, compiler.javaCompiler.get().metadata.languageVersion.asInt())
             }
+            val fixtureCompiler = p.tasks.getByName("compileMigrationSources${id}Java") as org.gradle.api.tasks.compile.JavaCompile
+            assertEquals(current, fixtureCompiler.javaCompiler.get().metadata.languageVersion.asInt())
             val generator = p.tasks.getByName("generateConvertedFixtures$id") as org.gradle.api.tasks.JavaExec
             assertEquals(current, generator.javaLauncher.get().metadata.languageVersion.asInt())
             assertEquals(current, generator.inputs.properties["javaVersion"])

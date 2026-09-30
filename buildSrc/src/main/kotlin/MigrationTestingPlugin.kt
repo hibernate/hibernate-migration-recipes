@@ -94,7 +94,8 @@ open class MigrationTestingExtension @Inject constructor(objects: ObjectFactory)
  * Registers source validation and target integration testing for each declared migration.
  *
  * Production recipes remain in the standard `main` SourceSet and JAR. Each migration
- * gets two test SourceSets, both including `src/testSupport`: the source suite inherits
+ * gets a compiled migration-input SourceSet and two test SourceSets, both including
+ * `src/testSupport`: the source suite inherits
  * recipe dependencies and adds the source ORM, while the target suite uses the target
  * ORM and database without inheriting the recipe or source environment dependencies.
  *
@@ -149,11 +150,16 @@ class MigrationTestingPlugin : Plugin<Project> {
                 require(source.name != target.name) { "Source and target environments must differ for ${migration.name}" }
                 val sourceName = "conversionTest$suffix"
                 val targetName = "conversionIntegrationTest$suffix"
-                listOf(sourceName, targetName, "generateConvertedFixtures$suffix").forEach {
+                val fixturesName = "migrationSources$suffix"
+                listOf(sourceName, targetName, fixturesName, "generateConvertedFixtures$suffix").forEach {
                     require(tasks.findByName(it) == null) { "Generated task name already exists: $it" }
                 }
                 val sourceSet = java.sourceSets.create(sourceName)
                 val targetSet = java.sourceSets.create(targetName)
+                val fixturesSet = java.sourceSets.create(fixturesName)
+                dependencies.add(fixturesSet.compileOnlyConfigurationName, "org.hibernate.orm:hibernate-core:${source.ormVersion.get()}")
+                suiteChecks.add(Triple(fixturesSet.name, configurations.getByName(fixturesSet.compileClasspathConfigurationName), source.name))
+                val fixturesRoot = layout.projectDirectory.dir("src/$fixturesName/java")
                 listOf(sourceSet, targetSet).forEach { suite ->
                     suite.java.srcDir("src/testSupport/java")
                     suite.resources.srcDir("src/testSupport/resources")
@@ -183,7 +189,9 @@ class MigrationTestingPlugin : Plugin<Project> {
                     classpath = sourceSet.runtimeClasspath
                     useJUnitPlatform()
                     maxHeapSize = "1g"
-                    dependsOn(verify, recipeJar)
+                    dependsOn(verify, recipeJar, tasks.named(fixturesSet.compileJavaTaskName))
+                    inputs.files(fixturesSet.allJava).withPathSensitivity(PathSensitivity.RELATIVE)
+                    systemProperty("migration.sources", fixturesRoot.asFile.absolutePath)
                     inputs.file(recipeJar.flatMap { it.archiveFile })
                     systemProperty("recipeJar", recipeJar.get().archiveFile.get().asFile.absolutePath)
                     inputs.file(metadata)
@@ -197,7 +205,9 @@ class MigrationTestingPlugin : Plugin<Project> {
                     classpath = sourceSet.runtimeClasspath
                     mainClass.set(migration.generatorMainClass)
                     maxHeapSize = "1g"
-                    dependsOn(verify)
+                    dependsOn(verify, tasks.named(fixturesSet.compileJavaTaskName))
+                    inputs.files(fixturesSet.allJava).withPathSensitivity(PathSensitivity.RELATIVE)
+                    systemProperty("migration.sources", fixturesRoot.asFile.absolutePath)
                     inputs.file(metadata)
                     inputs.files(profiles.values.flatMap { listOf(it.first, it.second) })
                     inputs.property("migration", migration.name)

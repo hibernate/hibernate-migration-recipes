@@ -11,6 +11,7 @@ This project provides migration recipes across the Hibernate family of projects.
 |`src/main/java` |Production recipes and shared recipe helpers.
 |`src/main/resources/META-INF/rewrite` |Declarative YAML recipes packaged in the recipe JAR.
 |`src/test/java` |Unit tests for version-independent test infrastructure, such as `FixtureBundleUnitTest`.
+|`src/migrationSources<Migration>/java` |Valid migration inputs compiled against the source ORM/JPA API, separate from recipes and test code.
 |`src/conversionTest<Migration>/java` |Conversion tests, validation helpers, and fixture generators for a migration path. Currently: `conversionTestOrm80`.
 |`src/conversionIntegrationTest<Migration>/java` |Tests that execute generated fixtures against the target project runtime. Currently: `conversionIntegrationTestOrm80`.
 |`src/testSupport/java` and `src/testSupport/resources` |Shared test helper sources and fixture catalogs compiled or copied into each test suite that uses them.
@@ -43,6 +44,31 @@ The existing ORM suite demonstrates this model through the `org.hibernate.migrat
 The `validateChangedJavaSourcesAfterRecipe` callback used by the concise `RewriteTest` examples sees only changed Java files. It does nothing for unchanged-only tests and cannot include unchanged supporting files. Use `ApiValidation.run` with complete inputs when compilation of unchanged fixtures or cross-file dependencies is part of the contract. Deliberately invalid or attribution-deficient fixtures use explicit raw-parser tests.
 
 Selecting the SourceSet does not automatically attach this helper to every test. Wire new applicable conversion tests into it explicitly. Deliberately invalid input tests and XML tests need their own appropriate assertions.
+
+=== Compiled migration inputs
+
+The `migrationSourcesOrm80` SourceSet provides ordinary Java files with IDE support
+and compilation against the configured source ORM/JPA environment. Its only declared
+dependency is the source Hibernate Core API, using `compileOnly`; JPA comes from that
+dependency graph. It does not inherit recipe or JUnit dependencies. Conversion tests
+and fixture generation depend on its compilation and track its Java sources as task
+inputs. Its compiled classes are not added to either test suite or the generator's
+runtime classpath, and are not packaged in the production JAR.
+
+The initial proof of concept covers QueryFlushMode scenarios under
+`fixture/queryflush/` and the shared runtime input `fixture/Migrated.java`.
+Independent scenarios use distinct packages so all inputs compile together.
+`MigrationSources.configured()` reads from the source root supplied by Gradle through
+`migration.sources`. Use `files(...)` for selected files or `scenario(...)` for all
+Java files under a scenario directory. Both preserve source-root-relative paths.
+Conversion tests and generators consume these original file contents, not the
+compiled input classes.
+
+Keep target compilation and fresh-target idempotence validation with `ApiValidation`.
+Compilation of this SourceSet validates only the primary source environment;
+applicable supplementary JPA profiles are still checked separately by conversion
+tests. Deliberately invalid or attribution-deficient inputs stay outside the compiled
+SourceSet. Other fixtures remain embedded until migrated to this arrangement.
 
 Recipe-specific conversion suites own API validation and diagnostic cases. `TemporalDiagnosticsTest` checks reporting precedence and original coordinates; temporal runtime verification separates value contracts from persistence and isolates reflection in a fixture-access helper.
 
@@ -95,7 +121,7 @@ The current path is `orm74` (ORM 7.4.11.Final, JPA 3.2.0) to `orm80` (ORM 8.0.0.
 
 XML validation uses schemas from the target ORM JAR under `org/hibernate/jpa/` and `org/hibernate/xsd/mapping/`. Published ORM artifacts come from Maven Central; no local ORM build or publication is required.
 
-For a migration named `orm80`, the convention creates `conversionTestOrm80` and `conversionIntegrationTestOrm80`, their standard Gradle dependency configurations, and `generateConvertedFixturesOrm80`. Each environment also has isolated compile and runtime dependency configurations.
+For a migration named `orm80`, the convention creates `migrationSourcesOrm80`, `conversionTestOrm80` and `conversionIntegrationTestOrm80`, their standard Gradle dependency configurations, and `generateConvertedFixturesOrm80`. Each environment also has isolated compile and runtime dependency configurations.
 
 `verifyMigrationEnvironments` checks the selected ORM and JPA versions against the declared environments and the suite classpaths. It writes helper metadata to `build/migration-testing/environments.properties`. This is generated output, not a configuration file to edit.
 
@@ -115,7 +141,13 @@ Provide the migration’s test directories, fixture catalog, generator, and inte
 
 Integration tests consume generated recipe output through a validated fixture handoff. The following paths and classes describe the currently implemented ORM example.
 
-The current fixture catalog is `src/testSupport/resources/orm80-fixtures.properties`. `RuntimeFixture` and `XmlRuntimeFixtures` supply original source text, and `ConvertedFixtureGenerator` applies the recipes for every declared variant. XML fixtures include emitted descriptors alongside Java sources in the same hashed manifest; runtime checks consume those actual emitted files. `XmlRecipeSupport` validates XML against the published schemas and checks idempotence.
+The current fixture catalog is `src/testSupport/resources/orm80-fixtures.properties`.
+`fixture/Migrated.java` in the compiled migration-input SourceSet supplies the shared
+runtime Java input. `TemporalRuntimeFixture` and `XmlRuntimeFixtures` still supply
+embedded source text. `ConvertedFixtureGenerator` applies the recipes for every
+declared variant. XML fixtures include emitted descriptors alongside Java sources
+in the same hashed manifest; runtime checks consume those actual emitted files.
+`XmlRecipeSupport` validates XML against the published schemas and checks idempotence.
 
 `generateConvertedFixturesOrm80` writes the results under `build/converted-fixtures/orm80/<variant>/<fixture>/sources` and publishes a manifest after successful generation. `FixtureBundle` manages and validates that handoff, including source hashes, expected files, and dependency identities. Missing, extra, corrupt, or stale outputs fail validation.
 

@@ -21,6 +21,7 @@ class RecipeArtifactTest {
             assertTrue(names.contains("META-INF/rewrite/orm80.yml"));
             for (String name : names) {
                 assertFalse(name.contains("/testing/"), name);
+                assertFalse(name.startsWith("fixture/"), name);
                 assertFalse(name.contains("Test.class") || name.contains("Fixture") || name.contains("ApiValidation"), name);
             }
         }

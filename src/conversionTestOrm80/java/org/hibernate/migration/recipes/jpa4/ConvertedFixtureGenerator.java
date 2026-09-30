@@ -6,6 +6,7 @@ import org.hibernate.migration.recipes.temporal.MigrateTemporalAnnotation;
 import org.hibernate.migration.recipes.temporal.TemporalRuntimeFixture;
 
 import org.hibernate.migration.testing.FixtureBundle;
+import org.hibernate.migration.testing.MigrationSources;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public final class ConvertedFixtureGenerator {
             Map<String, String> sources;
             if (entry.fixture().equals("runtime")) {
                 recipe = ApiValidation.composite(entry.recipe());
-                sources = Map.of("fixture/Migrated.java", RuntimeFixture.source());
+                sources = MigrationSources.configured().files("fixture/Migrated.java");
             }
             else if (entry.fixture().startsWith("temporal")) {
                 var target = MigrateTemporalAnnotation.TimestampTarget.valueOf(entry.fixture().substring("temporal".length()).toUpperCase(java.util.Locale.ROOT));
