@@ -5,12 +5,48 @@ import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.*
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.testing.Test
 import java.util.Properties
 import javax.inject.Inject
+
+/**
+ * Supplies fixture cleanup without retaining a Project in task actions.
+ *
+ * @author Steve Ebersole
+ */
+abstract class FixtureDirectoryCleaner {
+    @get:Inject
+    abstract val fileSystemOperations: FileSystemOperations
+}
+
+/**
+ * Writes verified environment metadata from configuration-cache-safe values.
+ *
+ * @author Steve Ebersole
+ */
+abstract class VerifyMigrationEnvironments : DefaultTask() {
+    // Derived from the classpaths and environment/migration inputs registered below.
+    // The provider resolves and validates these before configuration-cache storage;
+    // the execution action receives only strings, never dependency configurations.
+    @get:Internal
+    abstract val environmentMetadata: MapProperty<String, String>
+
+    @TaskAction
+    fun writeMetadata() {
+        val values = environmentMetadata.get()
+        val file = outputs.files.singleFile
+        file.parentFile.mkdirs()
+        // Deterministic properties: no timestamp and escaped Windows paths/separators.
+        file.writeText(values.keys.sorted().joinToString("\n", postfix = "\n") {
+            "$it=${values.getValue(it).replace("\\", "\\\\").replace(":", "\\:").replace("=", "\\=")}"
+        })
+    }
+}
 
 /**
  * A reusable Hibernate ORM environment, usable as either end of a migration.
@@ -99,7 +135,7 @@ class MigrationTestingPlugin : Plugin<Project> {
         val java = extensions.getByType(JavaPluginExtension::class.java)
         val javaVersion = JavaVersion.current().majorVersion.toInt()
         val metadata = layout.buildDirectory.file("migration-testing/environments.properties")
-        val verify = tasks.register("verifyMigrationEnvironments") {
+        val verify = tasks.register("verifyMigrationEnvironments", VerifyMigrationEnvironments::class.java) {
             group = "verification"
             outputs.file(metadata)
         }
@@ -157,6 +193,7 @@ class MigrationTestingPlugin : Plugin<Project> {
                     suiteChecks.add(Triple(suite.name, configurations.getByName(suite.runtimeClasspathConfigurationName), env.name))
                 }
                 val output = layout.buildDirectory.dir("converted-fixtures/${migration.name}")
+                val fixtureCleaner = objects.newInstance(FixtureDirectoryCleaner::class.java)
                 val recipeJar = tasks.named("jar", Jar::class.java)
                 val sourceTest = tasks.register(sourceName, Test::class.java) {
                     group = "verification"
@@ -193,7 +230,7 @@ class MigrationTestingPlugin : Plugin<Project> {
                     systemProperty("migration.id", migration.name)
                     systemProperty("transformedFixtures", output.get().asFile.absolutePath)
                     // JavaExec is not build-cache enabled. Its normal input/output snapshot provides up-to-date checking.
-                    doFirst { delete(output) }
+                    doFirst { fixtureCleaner.fileSystemOperations.delete { delete(output) } }
                 }
                 val integration = tasks.register(targetName, Test::class.java) {
                     group = "verification"
@@ -218,7 +255,7 @@ class MigrationTestingPlugin : Plugin<Project> {
                 inputs.property("environments", environments.mapValues { it.value.ormVersion.get() })
                 inputs.property("javaVersion", javaVersion)
                 inputs.property("migrations", paths.toString())
-                doLast {
+                environmentMetadata.set(providers.provider {
                     val values = Properties()
                     values["profiles"] = profiles.keys.joinToString(",")
                     profiles.forEach { (id, pair) ->
@@ -251,13 +288,8 @@ class MigrationTestingPlugin : Plugin<Project> {
                         values["migration.$id.source"] = path.first
                         values["migration.$id.target"] = path.second
                     }
-                    val file = metadata.get().asFile
-                    file.parentFile.mkdirs()
-                    // Deterministic properties: no timestamp and escaped Windows paths/separators.
-                    file.writeText(values.stringPropertyNames().sorted().joinToString("\n", postfix = "\n") {
-                        "$it=${values.getProperty(it).replace("\\", "\\\\").replace(":", "\\:").replace("=", "\\=")}"
-                    })
-                }
+                    values.stringPropertyNames().associateWith { values.getProperty(it) }
+                })
             }
         }
     }
