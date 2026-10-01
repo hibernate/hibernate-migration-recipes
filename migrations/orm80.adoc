@@ -78,6 +78,35 @@ simple names use fully qualified references. Enum constants, explicit option val
 and loading calls are preserved.
 
 
+=== `MigrateSqlResultVerification`
+
+Replaces explicit `check` members on Hibernate's `@SQLInsert`, `@SQLUpdate`,
+`@SQLDelete`, and `@SQLDeleteAll`, including annotations in repeatable containers.
+It is included in `orm80` and can also be selected independently.
+
+[cols="1,2",options="header"]
+|===
+|`ResultCheckStyle` |Replacement `verify`
+|`NONE` |`Expectation.None.class`
+|`COUNT` |`Expectation.RowCount.class`
+|`PARAM` |`Expectation.OutParameter.class`
+|===
+
+`Expectation` is `org.hibernate.jdbc.Expectation`. Existing explicit `verify`
+values take precedence: `check` is removed and `verify` is preserved, including
+custom expectations and the explicit `Expectation.class` default sentinel.
+Annotations with no explicit `check` remain unchanged. SQL, callable settings,
+other members, and comments are retained. Name conflicts use qualified references.
+
+Resolved qualified, ordinary, wildcard, and static-import enum references are
+supported. Imports still needed by other source uses are retained. ORM 8 also
+removes `ResultCheckStyle`; uses outside these annotation members require manual
+migration.
+
+Recognized unsupported candidates remain unchanged and use `SkippedMigrations`
+with `MISSING_TYPE_ATTRIBUTION`, `SQL_CHECK_VALUE_UNRESOLVED`, or
+`UNSUPPORTED_ANNOTATION_SHAPE`. Supply the source Hibernate API for type attribution.
+
 === `MigrateClientEnhancementOption`
 
 Renames `enableExtendedEnhancement` to `enableClientEnhancement` in supported Gradle, Maven, and Ant configuration.

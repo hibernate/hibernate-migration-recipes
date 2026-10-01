@@ -9,7 +9,7 @@ description: >-
   the ignored many-to-many orphan-removal attribute, and replaces Hibernate's
   QueryFlushMode enum with Jakarta Persistence's QueryFlushMode, and relocates
   multi-ID loading options to nested FindMultipleOption types, and renames the
-  client enhancement option in supported build configurations.
+  client enhancement option in supported build configurations, and migrates custom-SQL result verification.
 recipeList:
   - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
   - org.hibernate.migration.recipes.jpa4.MigratePersistenceXml
@@ -19,6 +19,7 @@ recipeList:
   - org.hibernate.migration.recipes.orm80.MigrateMappingXml
   - org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode
   - org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions
+  - org.hibernate.migration.recipes.orm80.MigrateSqlResultVerification
   - org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption
   - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
       targetVersion: '@orm80TargetVersion@'
