@@ -34,7 +34,7 @@ class OrmCoordinateResourceTest {
     }
     private void processResources() throws Exception {
         Path log = project.resolve("resource-processing.log");
-        Process process = new ProcessBuilder(List.of(System.getProperty("coordinate.gradleExecutable"), "--no-daemon", "--no-configuration-cache",
+        Process process = new ProcessBuilder(List.of(System.getProperty("coordinate.gradleExecutable"), "--daemon", "--no-configuration-cache",
                 "-Dorg.gradle.jvmargs=-Xmx384m", "processResources")).directory(project.toFile()).redirectErrorStream(true).redirectOutput(log.toFile()).start();
         if (!process.waitFor(180, TimeUnit.SECONDS)) { process.destroyForcibly(); fail("Resource build timed out: " + log); }
         assertEquals(0, process.exitValue(), Files.readString(log));

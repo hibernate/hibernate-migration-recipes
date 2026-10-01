@@ -99,6 +99,8 @@ val prepareCoordinateMaven = tasks.register<Sync>("prepareCoordinateMaven") {
 }
 afterEvaluate {
     val fixtureDirectory = layout.buildDirectory.dir("converted-build-fixtures/orm80")
+    val executionDirectory = layout.buildDirectory.dir("build-tool-tests/orm80")
+    val conversionSuite = sourceSets.getByName("conversionTestOrm80")
     val generateCoordinateBuildFixtures = tasks.register<JavaExec>("generateCoordinateBuildFixtures") {
         group = "verification"
         description = "Generates actual migrated build files for resolver verification."
@@ -112,12 +114,30 @@ afterEvaluate {
         doFirst { delete(fixtureDirectory) }
     }
     tasks.named<Test>("conversionTestOrm80") {
+        exclude("**/OrmCoordinateResolutionTest.class", "**/OrmCoordinateResourceTest.class")
+    }
+    val buildToolTestOrm80 = tasks.register<Test>("buildToolTestOrm80") {
+        group = "verification"
+        description = "Verifies migrated ORM build files with Gradle, Maven, Ivy, and Ant."
+        testClassesDirs = conversionSuite.output.classesDirs
+        classpath = conversionSuite.runtimeClasspath
+        include("**/OrmCoordinateResolutionTest.class", "**/OrmCoordinateResourceTest.class")
+        useJUnitPlatform()
+        maxHeapSize = "1g"
         dependsOn(generateCoordinateBuildFixtures, prepareCoordinateMaven)
         inputs.dir(fixtureDirectory)
         inputs.files(coordinateAntTools, coordinateMavenTool)
+        inputs.file(layout.buildDirectory.file("migration-testing/environments.properties"))
+        // The resource test creates a separate project from these actual build inputs.
+        inputs.files("build.gradle.kts", "settings.gradle.kts", "buildSrc/build.gradle.kts",
+            "buildSrc/src/main/kotlin/MigrationTestingPlugin.kt", "src/main/resources/META-INF/rewrite/orm80.yml")
+        localState.register(executionDirectory)
+        systemProperty("migration.metadata", layout.buildDirectory.file("migration-testing/environments.properties").get().asFile.absolutePath)
         systemProperty("coordinate.fixtures", fixtureDirectory.get().asFile.absolutePath)
+        systemProperty("coordinate.workDirectory", executionDirectory.get().asFile.absolutePath)
         systemProperty("coordinate.antClasspath", coordinateAntTools.asPath)
         systemProperty("coordinate.mavenHome", layout.buildDirectory.dir("coordinate-tools/maven/apache-maven-3.9.11").get().asFile.absolutePath)
         systemProperty("coordinate.gradleExecutable", gradle.gradleHomeDir!!.resolve("bin/gradle").absolutePath)
     }
+    tasks.check { dependsOn(buildToolTestOrm80) }
 }
