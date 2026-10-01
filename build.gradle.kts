@@ -55,11 +55,13 @@ val orm80TargetVersion = providers.provider {
 }
 tasks.processResources {
     inputs.property("orm80TargetVersion", orm80TargetVersion)
+    val targetVersion = orm80TargetVersion.get()
+    val processedRecipe = destinationDir.resolve("META-INF/rewrite/orm80.yml")
     filesMatching("META-INF/rewrite/orm80.yml") {
-        filter { line -> line.replace("@orm80TargetVersion@", orm80TargetVersion.get()) }
+        filter { line -> line.replace("@orm80TargetVersion@", targetVersion) }
     }
     doLast {
-        require(!destinationDir.resolve("META-INF/rewrite/orm80.yml").readText().contains("@orm80TargetVersion@"))
+        require(!processedRecipe.readText().contains("@orm80TargetVersion@"))
     }
 }
 
@@ -101,6 +103,7 @@ afterEvaluate {
     val fixtureDirectory = layout.buildDirectory.dir("converted-build-fixtures/orm80")
     val executionDirectory = layout.buildDirectory.dir("build-tool-tests/orm80")
     val conversionSuite = sourceSets.getByName("conversionTestOrm80")
+    val fixtureCleaner = objects.newInstance(FixtureDirectoryCleaner::class.java)
     val generateCoordinateBuildFixtures = tasks.register<JavaExec>("generateCoordinateBuildFixtures") {
         group = "verification"
         description = "Generates actual migrated build files for resolver verification."
@@ -111,7 +114,7 @@ afterEvaluate {
         outputs.dir(fixtureDirectory)
         systemProperty("migration.metadata", layout.buildDirectory.file("migration-testing/environments.properties").get().asFile.absolutePath)
         systemProperty("coordinate.fixtures", fixtureDirectory.get().asFile.absolutePath)
-        doFirst { delete(fixtureDirectory) }
+        doFirst { fixtureCleaner.fileSystemOperations.delete { delete(fixtureDirectory) } }
     }
     tasks.named<Test>("conversionTestOrm80") {
         maxParallelForks = 2
