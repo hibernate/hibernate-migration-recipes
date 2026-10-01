@@ -2,6 +2,7 @@ package org.hibernate.migration.recipes.orm80;
 
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.hibernate.migration.testing.ValidationEnvironment;
+import org.hibernate.migration.testing.RecipeExecutionContexts;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -33,12 +34,12 @@ class OrmCoordinatesTest {
         assertEquals(text, source.printAll()); return source;
     }
     static Outcome run(Map<String, String> files) {
-        var ctx = new InMemoryExecutionContext(e -> { throw new AssertionError(e); });
+        var ctx = RecipeExecutionContexts.standard(e -> { throw new AssertionError(e); });
         List<SourceFile> sources = files.entrySet().stream().map(e -> parse(e.getKey(), e.getValue(), ctx)).toList();
         var result = new MigrateOrmCoordinates(TARGET).run(new InMemoryLargeSourceSet(sources), ctx);
         Map<String, String> output = new LinkedHashMap<>(files);
         for (Result r : result.getChangeset().getAllResults()) output.put(r.getAfter().getSourcePath().toString(), r.getAfter().printAll());
-        var secondContext = new InMemoryExecutionContext(e -> { throw new AssertionError(e); });
+        var secondContext = RecipeExecutionContexts.standard(e -> { throw new AssertionError(e); });
         var second = new MigrateOrmCoordinates(TARGET).run(new InMemoryLargeSourceSet(output.entrySet().stream()
                 .map(e -> parse(e.getKey(), e.getValue(), secondContext)).toList()), secondContext);
         assertTrue(second.getChangeset().getAllResults().isEmpty(), () -> second.getChangeset().getAllResults().stream().map(Result::diff).toList().toString() + second.getDataTableRows(SkippedMigrations.class).stream().map(r -> r.getSubject() + ":" + r.getReasonCode()).toList());
@@ -54,18 +55,23 @@ class OrmCoordinatesTest {
         assertTrue(outcome.rows.stream().anyMatch(r -> r.getReasonCode().equals(OrmCoordinateSupport.VERSION)));
     }
     @Test void unavailablePlatformRetainsExplicitVersion(@org.junit.jupiter.api.io.TempDir Path emptyRepository) {
+        String input = "dependencies { implementation(\"org.hibernate:hibernate-core:7.4.11.Final\") }\n";
+        // Populate the ordinary cache before proving an isolated repository still cannot resolve the BOM.
+        Outcome ordinary = run("build.gradle", input);
+        assertTrue(ordinary.files.get("build.gradle").contains("implementation(platform("));
+        assertFalse(ordinary.rows.stream().anyMatch(r -> r.getReasonCode().equals(OrmCoordinateSupport.MANAGEMENT)));
         var ctx = new InMemoryExecutionContext(e -> { throw new AssertionError(e); });
         org.openrewrite.maven.MavenExecutionContextView.view(ctx)
                 .setMirrors(List.of(new org.openrewrite.maven.tree.MavenRepositoryMirror("empty", emptyRepository.toUri().toString(), "*", true, false, null)))
                 .setAddLocalRepository(false).setAddCentralRepository(false);
-        SourceFile source = parse("build.gradle", "dependencies { implementation(\"org.hibernate:hibernate-core:7.4.11.Final\") }\n", ctx);
+        SourceFile source = parse("build.gradle", input, ctx);
         var result = new MigrateOrmCoordinates(TARGET).run(new InMemoryLargeSourceSet(List.of(source)), ctx);
         String output = result.getChangeset().getAllResults().get(0).getAfter().printAll();
         assertTrue(output.contains("org.hibernate.orm:hibernate-core:" + TARGET), output);
         assertTrue(result.getDataTableRows(SkippedMigrations.class).stream().anyMatch(r -> r.getReasonCode().equals(OrmCoordinateSupport.MANAGEMENT)));
     }
     @Test void enhancementAndCoordinateMigrationsCompose() {
-        var ctx = new InMemoryExecutionContext(e -> { throw new AssertionError(e); });
+        var ctx = RecipeExecutionContexts.standard(e -> { throw new AssertionError(e); });
         String input = "<project><build><plugins><plugin><groupId>org.hibernate.orm.tooling</groupId><artifactId>hibernate-enhance-maven-plugin</artifactId><version>7.4.11.Final</version><configuration><enableExtendedEnhancement>true</enableExtendedEnhancement></configuration></plugin></plugins></build></project>";
         Recipe combined = new Recipe() {
             @Override public String getDisplayName() { return "Verify aggregate composition"; }
@@ -235,7 +241,7 @@ class OrmCoordinatesTest {
         assertEquals(foreign, run("pom.xml", foreign).files.get("pom.xml"));
     }
     @Test void publishedPlatformMetadata() throws Exception {
-        var ctx = new InMemoryExecutionContext(e -> { throw new AssertionError(e); });
+        var ctx = RecipeExecutionContexts.standard(e -> { throw new AssertionError(e); });
         var downloader = new org.openrewrite.maven.internal.MavenPomDownloader(ctx);
         var pom = downloader.download(new org.openrewrite.maven.tree.GroupArtifactVersion("org.hibernate.orm", "hibernate-platform", TARGET),
                 null, null, List.of(org.openrewrite.maven.tree.MavenRepository.MAVEN_CENTRAL)).resolve(List.of(), downloader, ctx);

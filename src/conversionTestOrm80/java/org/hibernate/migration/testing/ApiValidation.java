@@ -122,7 +122,7 @@ public final class ApiValidation {
 
     private static RecipeRun execute(Recipe recipe, List<SourceFile> sources) {
         List<Throwable> errors = new ArrayList<>();
-        var run = recipe.run(new InMemoryLargeSourceSet(sources), new InMemoryExecutionContext(errors::add));
+        var run = recipe.run(new InMemoryLargeSourceSet(sources), RecipeExecutionContexts.standard(errors::add));
         assertNoExecutionErrors(errors);
         return run;
     }

@@ -1,6 +1,7 @@
 package org.hibernate.migration.recipes.orm80;
 
 import org.hibernate.migration.testing.ValidationEnvironment;
+import org.hibernate.migration.testing.RecipeExecutionContexts;
 import org.openrewrite.*;
 import org.openrewrite.internal.InMemoryLargeSourceSet;
 import java.nio.file.*;
@@ -41,7 +42,7 @@ public final class OrmCoordinateBuildFixtures {
         files.put("ant/build.xml", "<project xmlns:m='antlib:org.apache.maven.artifact.ant' default='resolve'><target name='resolve'><m:dependencies filesetId='resolved' useScope='compile' settingsFile='settings.xml'><remoteRepository id='central' url='https://repo.maven.apache.org/maven2'/><dependency groupId='org.hibernate' artifactId='hibernate-entitymanager' version='" + source + "'/><dependency groupId='org.hibernate' artifactId='hibernate-core' version='" + source + "'/><dependency groupId='org.hibernate' artifactId='hibernate-envers' version='" + source + "'/><dependency groupId='org.hibernate' artifactId='hibernate-jpamodelgen' version='" + source + "'/></m:dependencies><pathconvert property='artifacts' refid='resolved'/><echo message='SELECTED:${artifacts}'/></target></project>\n");
         files.put("ant/settings.xml", "<settings><localRepository>" + root.resolveSibling("resolver-cache/ant").toAbsolutePath()
                 + "</localRepository><mirrors><mirror><id>central-https</id><mirrorOf>*</mirrorOf><url>https://repo.maven.apache.org/maven2</url></mirror></mirrors></settings>\n");
-        var ctx = new InMemoryExecutionContext(e -> { throw new IllegalStateException(e); });
+        var ctx = RecipeExecutionContexts.standard(e -> { throw new IllegalStateException(e); });
         var sources = files.entrySet().stream().map(e -> OrmCoordinatesTest.parse(e.getKey(), e.getValue(), ctx)).toList();
         var run = new MigrateOrmCoordinates(target).run(new InMemoryLargeSourceSet(sources), ctx);
         for (Result result : run.getChangeset().getAllResults()) files.put(result.getAfter().getSourcePath().toString(), result.getAfter().printAll());
