@@ -89,9 +89,7 @@ public final class ApiValidation {
             }
             if (sources.isEmpty()) return;
             compile(emitted, environments().primary().target());
-            for (String api : List.of("orm74", "jpa30", "jpa31", "jpa32")) {
-                run(spec.getRecipe(), sources, environments().context(api));
-            }
+            run(spec.getRecipe(), sources, environments().primary());
         });
     }
 

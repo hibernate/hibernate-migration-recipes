@@ -43,11 +43,6 @@ migrationTesting {
             databaseDependency.set("com.h2database:h2:2.5.252")
         }
     }
-    supplementaryApis {
-        register("jpa30") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.0.0") }
-        register("jpa31") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.1.0") }
-        register("jpa32") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.2.0") }
-    }
 }
 
 val orm80TargetVersion = providers.provider {

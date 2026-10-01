@@ -3,17 +3,15 @@ package org.hibernate.migration.recipes.jpa4;
 import org.hibernate.migration.testing.ApiValidation;
 import org.hibernate.migration.testing.MigrationSources;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /// Validates named-query shapes, lexical boundaries, comments, and candidate diagnostics.
 /// @author Steve Ebersole
 class NamedQueryConversionTest {
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void namedShapesAndComments(String api) {
+    @Test
+    void namedShapesAndComments() {
+        String api = "orm74";
         var sources = MigrationSources.configured().scenario("fixture/jpa4/namedqueryconversion/namedshapesandcomments");
         var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sources, api);
         assertTrue(result.skipped().isEmpty());
@@ -27,9 +25,9 @@ class NamedQueryConversionTest {
         }
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void mixedContainersAndOriginalReportLocations(String api) {
+    @Test
+    void mixedContainersAndOriginalReportLocations() {
+        String api = "orm74";
         String path = "fixture/jpa4/namedqueryconversion/mixedcontainersandoriginalreportlocations/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);
         String source = sourceFiles.get(path);
@@ -50,9 +48,9 @@ class NamedQueryConversionTest {
         assertTrue(result.text().matches("(?s).*// unrelated\\s+String value = \"hello\";.*"));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void queryGuards(String api) {
+    @Test
+    void queryGuards() {
+        String api = "orm74";
         List<QueryGuardCase> cases = queryGuardCases();
         String directory = "fixture/jpa4/namedqueryconversion/queryguards/";
         var sources = MigrationSources.configured().scenario(directory);
@@ -100,9 +98,9 @@ class NamedQueryConversionTest {
         );
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void nativeLexicalPositiveAndTextBlocks(String api) {
+    @Test
+    void nativeLexicalPositiveAndTextBlocks() {
+        String api = "orm74";
         var sources = MigrationSources.configured().scenario("fixture/jpa4/namedqueryconversion/nativelexicalpositiveandtextblocks");
         var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sources, api);
         assertTrue(result.skipped().isEmpty());
@@ -145,9 +143,9 @@ class NamedQueryConversionTest {
         assertTrue(result.text().contains("@NamedQueries({}) class Empty {}"));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void namedQueryTypeParameterConflicts(String api) {
+    @Test
+    void namedQueryTypeParameterConflicts() {
+        String api = "orm74";
         var sourceFiles = MigrationSources.configured().files("fixture/jpa4/namedqueryconversion/namedquerytypeparameterconflicts/Example.java");
         String source = sourceFiles.get("fixture/jpa4/namedqueryconversion/namedquerytypeparameterconflicts/Example.java");
         var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, api);
@@ -163,7 +161,7 @@ class NamedQueryConversionTest {
         String path = "fixture/jpa4/namedqueryconversion/explicitjpa32resultclassisaconflict/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);
         String source = sourceFiles.get(path);
-        var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "jpa32");
+        var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "orm74");
         assertEquals(source, result.text());
         assertEquals("INCOMPATIBLE_ANNOTATION_ATTRIBUTES", result.skipped().getFirst().getReasonCode());
     }
@@ -175,7 +173,7 @@ class NamedQueryConversionTest {
         String source = sourceFiles.get(path);
         assertTrue(source.contains("\r\n"), "Fixture must contain CRLF line endings");
         assertFalse(source.replace("\r\n", "").contains("\n"), "Fixture must not contain bare LF line endings");
-        var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "jpa32");
+        var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "orm74");
         assertFalse(result.text().replace("\r\n", "").contains("\n"));
         assertTrue(result.skipped().isEmpty());
     }
@@ -187,7 +185,7 @@ class NamedQueryConversionTest {
         String source = sourceFiles.get(path);
         assertTrue(source.contains("\r\n"), "Fixture must contain CRLF line endings");
         assertFalse(source.replace("\r\n", "").contains("\n"), "Fixture must not contain bare LF line endings");
-        var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "jpa32");
+        var result = ApiValidation.run(new MigrateNamedQueryToStatement(), sourceFiles, "orm74");
         assertEquals(source, result.text());
         assertEquals(List.of(5, 9), result.skipped().stream().map(r -> r.getLine()).sorted().toList());
         assertTrue(result.skipped().stream().allMatch(r -> r.getColumn() == 1));

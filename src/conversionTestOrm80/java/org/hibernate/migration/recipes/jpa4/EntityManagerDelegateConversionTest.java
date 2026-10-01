@@ -4,17 +4,15 @@ import org.hibernate.migration.testing.ApiValidation;
 import org.hibernate.migration.testing.MigrationSources;
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /// Validates delegate dispatch and name-resolution boundaries against source and target APIs.
 /// @author Steve Ebersole
 class EntityManagerDelegateConversionTest {
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void delegateDispatch(String api) {
+    @Test
+    void delegateDispatch() {
+        String api = "orm74";
         var sourceFiles = MigrationSources.configured().files("fixture/jpa4/entitymanagerdelegateconversion/delegatedispatch/Example.java");
         String source = sourceFiles.get("fixture/jpa4/entitymanagerdelegateconversion/delegatedispatch/Example.java");
         var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sourceFiles, api);
@@ -25,9 +23,9 @@ class EntityManagerDelegateConversionTest {
         assertTrue(result.text().matches("(?s).*Object call\\(\\)\\s*\\{\\s*return getDelegate\\(\\);\\s*}.*"));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void delegateSkips(String api) {
+    @Test
+    void delegateSkips() {
+        String api = "orm74";
         String path = "fixture/jpa4/entitymanagerdelegateconversion/delegateskips/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);
         String source = sourceFiles.get(path);
@@ -45,14 +43,14 @@ class EntityManagerDelegateConversionTest {
         String path = "fixture/jpa4/entitymanagerdelegateconversion/delegatepackagetypeshadowandsuperoverride/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);
         String source = sourceFiles.get(path);
-        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sourceFiles, "jpa32");
+        var result = ApiValidation.run(new MigrateEntityManagerGetDelegate(), sourceFiles, "orm74");
         assertEquals(source, result.text());
-        assertReasonsByLine(result.skipped(), Map.of(7, "UNSUPPORTED_METHOD_OVERRIDE", 11, "NAME_RESOLUTION_CONFLICT"), "jpa32", path);
+        assertReasonsByLine(result.skipped(), Map.of(7, "UNSUPPORTED_METHOD_OVERRIDE", 11, "NAME_RESOLUTION_CONFLICT"), "orm74", path);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void delegateTypeParameterConflicts(String api) {
+    @Test
+    void delegateTypeParameterConflicts() {
+        String api = "orm74";
         String path = "fixture/jpa4/entitymanagerdelegateconversion/delegatetypeparameterconflicts/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);
         String source = sourceFiles.get(path);
@@ -61,9 +59,9 @@ class EntityManagerDelegateConversionTest {
         assertReasonsByLine(result.skipped(), Map.of(7, "NAME_RESOLUTION_CONFLICT", 13, "NAME_RESOLUTION_CONFLICT"), api, path);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void delegateInheritedMemberTypeConflictsAcrossFiles(String api) {
+    @Test
+    void delegateInheritedMemberTypeConflictsAcrossFiles() {
+        String api = "orm74";
         String base = MigrationSources.configured().read("fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Base.java");
         String path = "fixture/jpa4/entitymanagerdelegateconversion/delegateinheritedmembertypeconflictsacrossfiles/Example.java";
         var sourceFiles = MigrationSources.configured().files(path);

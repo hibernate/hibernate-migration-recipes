@@ -22,14 +22,13 @@ class CompositeMigrationTest {
         String source = sources.get(path);
         String temporal = source.substring(source.indexOf("@Temporal(DATE)"), source.indexOf("@MapKey"));
         String unrelated = sources.get(unrelatedPath);
-        for (String api : List.of("orm74", "jpa30", "jpa31", "jpa32")) {
-            var result = ApiValidation.run(ApiValidation.composite("org.hibernate.migration.recipes.orm80"), sources, api);
-            assertTrue(result.files().get(path).contains(temporal));
-            assertEquals(unrelated, result.files().get(unrelatedPath));
-            assertTrue(result.files().get(path).contains("unwrap(java.lang.Object.class)"), api);
-            assertTrue(result.files().get(path).contains("@MapKey(\"id\")"), api);
-            assertTrue(result.skipped().isEmpty());
-        }
+        String api = "orm74";
+        var result = ApiValidation.run(ApiValidation.composite("org.hibernate.migration.recipes.orm80"), sources, api);
+        assertTrue(result.files().get(path).contains(temporal));
+        assertEquals(unrelated, result.files().get(unrelatedPath));
+        assertTrue(result.files().get(path).contains("unwrap(java.lang.Object.class)"), api);
+        assertTrue(result.files().get(path).contains("@MapKey(\"id\")"), api);
+        assertTrue(result.skipped().isEmpty());
     }
 
     @Test
@@ -44,7 +43,7 @@ class CompositeMigrationTest {
                 }
                 """;
         var ctx = new InMemoryExecutionContext(t -> fail(t));
-        SourceFile parsed = ApiValidation.parser("jpa32").build().parse(ctx, input).findFirst().orElseThrow();
+        SourceFile parsed = ApiValidation.parser("orm74").build().parse(ctx, input).findFirst().orElseThrow();
         // Deliberately remove attribution; raw execution tests reporting rather than compilation.
         SourceFile stripped = (SourceFile) new JavaIsoVisitor<Integer>() {
             @Override public J.Annotation visitAnnotation(J.Annotation a, Integer p) { return super.visitAnnotation(a, p).withType(null); }

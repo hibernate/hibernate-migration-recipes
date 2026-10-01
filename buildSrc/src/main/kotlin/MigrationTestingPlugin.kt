@@ -52,24 +52,9 @@ open class MigrationDefinition @Inject constructor(private val id: String, objec
 }
 
 /**
- * An additional API profile for source-validation cases, such as an earlier JPA release.
- *
- * Its classpath is exposed through metadata without replacing dependencies in an ORM
- * environment. It cannot serve as a migration's source or target environment.
- *
- * @author Steve Ebersole
- */
-open class SupplementaryApi @Inject constructor(private val id: String, objects: ObjectFactory) : Named {
-    override fun getName() = id
-    /** Dependency notation resolved into this profile's classpath. */
-    val dependency = objects.property(String::class.java)
-}
-
-/**
  * The `migrationTesting` build DSL for reusable environments and conversion suites.
  *
  * Register environments once, then refer to their names from migration definitions.
- * Supplementary APIs provide additional parser/compiler inputs for regression cases.
  *
  * @author Steve Ebersole
  */
@@ -80,14 +65,10 @@ open class MigrationTestingExtension @Inject constructor(objects: ObjectFactory)
     val environments = objects.domainObjectContainer(OrmEnvironment::class.java) { objects.newInstance(OrmEnvironment::class.java, it) }
     /** Conversion paths for which the plugin creates validation suites. */
     val migrations = objects.domainObjectContainer(MigrationDefinition::class.java) { objects.newInstance(MigrationDefinition::class.java, it) }
-    /** Additional API profiles exposed to validation helpers through metadata. */
-    val supplementaryApis = objects.domainObjectContainer(SupplementaryApi::class.java) { objects.newInstance(SupplementaryApi::class.java, it) }
     /** Configures the reusable ORM environment definitions. */
     fun environments(action: Action<NamedDomainObjectContainer<OrmEnvironment>>) = action.execute(environments)
     /** Configures the conversion paths and their fixture generators. */
     fun migrations(action: Action<NamedDomainObjectContainer<MigrationDefinition>>) = action.execute(migrations)
-    /** Configures API profiles used alongside the primary ORM source environment. */
-    fun supplementaryApis(action: Action<NamedDomainObjectContainer<SupplementaryApi>>) = action.execute(supplementaryApis)
 }
 
 /**
@@ -133,11 +114,6 @@ class MigrationTestingPlugin : Plugin<Project> {
                 val notation = "org.hibernate.orm:hibernate-core:${env.ormVersion.get()}"
                 profiles[env.name] = configuration("ormEnvironment${suffix(env.name)}CompileClasspath", Usage.JAVA_API, notation) to
                     configuration("ormEnvironment${suffix(env.name)}RuntimeClasspath", Usage.JAVA_RUNTIME, notation)
-            }
-            model.supplementaryApis.forEach { api ->
-                require(!profiles.containsKey(api.name)) { "Duplicate environment/profile ${api.name}" }
-                val cp = configuration("supplementary${suffix(api.name)}Classpath", Usage.JAVA_RUNTIME, api.dependency.get())
-                profiles[api.name] = cp to cp
             }
             val suiteChecks = mutableListOf<Triple<String, Configuration, String>>()
             val paths = model.migrations.associate { it.name to (it.sourceEnvironment.get() to it.targetEnvironment.get()) }
@@ -236,6 +212,7 @@ class MigrationTestingPlugin : Plugin<Project> {
                 tasks.named("check") { dependsOn(sourceTest, integration) }
             }
             verify.configure {
+                inputs.property("profiles", profiles.keys.toList())
                 inputs.files(profiles.values.flatMap { listOf(it.first, it.second) })
                 inputs.files(suiteChecks.map { it.second })
                 inputs.property("environments", environments.mapValues { it.value.ormVersion.get() })
@@ -245,26 +222,23 @@ class MigrationTestingPlugin : Plugin<Project> {
                     val values = Properties()
                     values["profiles"] = profiles.keys.joinToString(",")
                     profiles.forEach { (id, pair) ->
-                        val core = module(pair.second, "org.hibernate.orm", "hibernate-core", environments.containsKey(id))
+                        val core = module(pair.second, "org.hibernate.orm", "hibernate-core", true)!!
                         val jpa = module(pair.second, "jakarta.persistence", "jakarta.persistence-api", true)!!
-                        environments[id]?.let {
-                            require(core == it.ormVersion.get()) { "ORM version replacement in $id: $core" }
-                            val component = pair.second.incoming.resolutionResult.allComponents.single { c ->
-                                c.moduleVersion?.group == "org.hibernate.orm" && c.moduleVersion?.name == "hibernate-core"
-                            }
-                            val requestedJpa = component.dependencies.filterIsInstance<ResolvedDependencyResult>()
-                                .mapNotNull { d -> d.requested as? ModuleComponentSelector }
-                                .single { d -> d.group == "jakarta.persistence" && d.module == "jakarta.persistence-api" }.version
-                            require(jpa == requestedJpa) { "JPA version replacement in $id: ORM requests $requestedJpa, resolved $jpa" }
+                        val environment = environments.getValue(id)
+                        require(core == environment.ormVersion.get()) { "ORM version replacement in $id: $core" }
+                        val component = pair.second.incoming.resolutionResult.allComponents.single { c ->
+                            c.moduleVersion?.group == "org.hibernate.orm" && c.moduleVersion?.name == "hibernate-core"
                         }
+                        val requestedJpa = component.dependencies.filterIsInstance<ResolvedDependencyResult>()
+                            .mapNotNull { d -> d.requested as? ModuleComponentSelector }
+                            .single { d -> d.group == "jakarta.persistence" && d.module == "jakarta.persistence-api" }.version
+                        require(jpa == requestedJpa) { "JPA version replacement in $id: ORM requests $requestedJpa, resolved $jpa" }
                         values["$id.compile"] = pair.first.asPath
                         values["$id.runtime"] = pair.second.asPath
                         values["$id.jpaVersion"] = jpa
                         values["$id.javaVersion"] = javaVersion.toString()
-                        if (core != null) {
-                            values["$id.ormVersion"] = core
-                            values["$id.ormJar"] = pair.second.resolvedConfiguration.resolvedArtifacts.single { it.moduleVersion.id.group == "org.hibernate.orm" && it.name == "hibernate-core" }.file.absolutePath
-                        }
+                        values["$id.ormVersion"] = core
+                        values["$id.ormJar"] = pair.second.resolvedConfiguration.resolvedArtifacts.single { it.moduleVersion.id.group == "org.hibernate.orm" && it.name == "hibernate-core" }.file.absolutePath
                         values["$id.modules"] = pair.second.resolvedConfiguration.resolvedArtifacts.map { it.moduleVersion.id.toString() }.sorted().joinToString(",")
                         require(module(pair.first, "jakarta.persistence", "jakarta.persistence-api", true) == jpa) { "Compile/runtime JPA mismatch in $id" }
                     }
