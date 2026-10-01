@@ -1,6 +1,12 @@
 = Hibernate ORM 7.4 to 8.0
+:toc2:
+:fn-xml: footnote:xml[See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces, versions, package descriptors, and comment handling.]
 
-Select `org.hibernate.migration.recipes.orm80` for the aggregate ORM 7.4 to 8.0 upgrade. It includes JPA 3.x to 4.0 migration for Hibernate applications and Hibernate mapping XML migration, including version updates, comments, and removal of ignored many-to-many orphan removal.
+Select `org.hibernate.migration.recipes.orm80` (`orm80`) for the aggregate ORM 7.4 to 8.0 upgrade.
+
+[NOTE]
+The migration for link:temporal-annotation.adoc[Modernizing @Temporal mappings] is not part of this recipe.
+
 
 == Enabling with Gradle
 
@@ -17,30 +23,53 @@ rewrite {
 Preview the changes with `./gradlew rewriteDryRun`, then apply them with `./gradlew rewriteRun`.
 See the https://docs.openrewrite.org/reference/gradle-plugin-configuration[OpenRewrite Gradle plugin documentation] for plugin and dependency setup.
 
-== Individual recipes
+See link:../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for diagnostic reports.
 
-Individual recipes live in `org.hibernate.migration.recipes.jpa4`:
+== Jakarta Persistence 4.0 Recipes
 
-* `MigrateNamedQueryToStatement`
-* `MigratePersistenceXml`
-* `MigrateOrmXml`
-* `MigrateEntityManagerGetDelegate`
-* `MigrateMapKeyNameToValue`
+Jakarta Persistence 4.0 migrations live in the `org.hibernate.migration.recipes.jpa4` package.
 
-Hibernate-specific recipes live in `org.hibernate.migration.recipes.orm80`:
+=== `MigrateNamedQueryToStatement`
 
-* `MigrateMappingXml`
-* `MigrateQueryFlushMode`
-* `MigrateFindMultipleOptions`
-* `MigrateClientEnhancementOption`
+Migrates `@NamedQuery` annotations which represent INSERT, UPDATE or DELETE statements to `@NamedStatement`.
 
-`MigrateQueryFlushMode` replaces Java references to `org.hibernate.query.QueryFlushMode`
+=== `MigratePersistenceXml`
+
+Migrates `persistence.xml` files updating the version to 4.0 and converting `<class>some.package.package-info</class>` references to `<package-descriptor>some.package</package-descriptor>`.{fn-xml}
+
+=== `MigrateOrmXml`
+
+Migrates `orm.xml` files updating the version to 4.0.{fn-xml}
+
+=== `MigrateEntityManagerGetDelegate`
+
+Migrates calls to `EntityManager.getDelegate()` to `EntityManager.unwrap(Object.class)`
+
+=== `MigrateMapKeyNameToValue`
+
+Migrates `@MapKey(name="the-name")` references to `@MapKey("the-name")`
+
+== Hibernate 8.0 Recipes
+
+Hibernate-specific recipes live in the `org.hibernate.migration.recipes.orm80` package.
+
+=== `MigrateMappingXml`
+
+Migrates Hibernate's `mapping.xml` files{fn-xml}
+
+* updates version to 8.0
+* migrates legacy table and column comment attributes to elements
+* removes ignored many-to-many orphan-removal
+
+=== `MigrateQueryFlushMode`
+
+Replaces Java references to `org.hibernate.query.QueryFlushMode`
 with `jakarta.persistence.QueryFlushMode`, including static imports, declarations,
-and named-query annotation values. The constants `FLUSH`, `NO_FLUSH`, and `DEFAULT`
-and existing query method calls are preserved. It does not convert other flush-mode
-enums or class names in strings.
+and named-query annotation values.
 
-`MigrateFindMultipleOptions` relocates Java references to `org.hibernate.OrderingMode`,
+=== `MigrateFindMultipleOptions`
+
+Relocates Java references to `org.hibernate.OrderingMode`,
 `org.hibernate.SessionCheckMode`, `org.hibernate.RemovalsMode`, and `org.hibernate.BatchSize`
 to the corresponding nested types in `org.hibernate.FindMultipleOption`. It handles
 imports (including static and wildcard imports), declarations, enum constants,
@@ -48,52 +77,45 @@ class literals, and batch-size constructors and constructor references. Conflict
 simple names use fully qualified references. Enum constants, explicit option values,
 and loading calls are preserved.
 
-The recipe requires attributed Hibernate types. Unrelated types, the
-`org.hibernate.annotations.BatchSize` annotation, and class-name strings remain unchanged.
-It does not insert options into calls that omit them or compensate for changed defaults,
-including the nested `SessionCheckMode` default.
 
-See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces, versions, package descriptors, and comment handling.
+=== `MigrateClientEnhancementOption`
 
-For example, select `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue` to run only that conversion. The former `org.hibernate.migration.recipes.jpa4` aggregate has been removed; select `org.hibernate.migration.recipes.orm80` instead. Individual recipe identifiers are unchanged. The previous package and grouping names have been replaced; there are no compatibility aliases.
+Renames `enableExtendedEnhancement` to `enableClientEnhancement` in supported Gradle, Maven, and Ant configuration.
+It is included in `orm80` and can also be selected independently.
+Its independently selectable leaves are
 
-These recipes do not upgrade dependency coordinates. Java matching requires the application's source JPA API on the parser classpath.
+* `MigrateGradleClientEnhancementOption`
+* `MigrateMavenClientEnhancementOption`
+* `MigrateAntClientEnhancementOption`
 
-== Client enhancement option in build files
-
-`MigrateClientEnhancementOption` renames `enableExtendedEnhancement` to
-`enableClientEnhancement` in supported Gradle, Maven, and Ant configuration.
-It is included in `orm80` and can also be selected independently. Its independently
-selectable leaves are `MigrateGradleClientEnhancementOption`,
-`MigrateMavenClientEnhancementOption`, and `MigrateAntClientEnhancementOption`,
-all in `org.hibernate.migration.recipes.orm80`.
+which are all part of the `org.hibernate.migration.recipes.orm80` aggregate recipe.
 
 If only the old option exists, its value or expression is preserved. If both options
 exist in one supported configuration, the new option wins, including explicit
 `false`, and the obsolete setting is removed. Comments are retained.
 
 * Gradle: Groovy `build.gradle` and Kotlin `build.gradle.kts` scripts with canonical
-  `hibernate { enhancement { ... } }` blocks. The script must explicitly apply
-  `org.hibernate.orm`, or the parser must attribute the Hibernate receiver. Direct
-  assignments and `.set(...)` statements, including `this` qualification, are
-  supported. Duplicate writes, multiple enhancement blocks, conditional/nested
-  writes, legacy reads, and unsupported setters require review. When both names
-  occur, the old value must be a boolean literal: removing an arbitrary expression
-  could discard side effects. Cross-project configuration, convention plugins,
-  imported scripts, and arbitrary receiver aliases are outside initial support.
+`hibernate { enhancement { ... } }` blocks. The script must explicitly apply
+`org.hibernate.orm`, or the parser must attribute the Hibernate receiver. Direct
+assignments and `.set(...)` statements, including `this` qualification, are
+supported. Duplicate writes, multiple enhancement blocks, conditional/nested
+writes, legacy reads, and unsupported setters require review. When both names
+occur, the old value must be a boolean literal: removing an arbitrary expression
+could discard side effects. Cross-project configuration, convention plugins,
+imported scripts, and arbitrary receiver aliases are outside initial support.
 * Maven: Direct option elements in plugin and execution configurations, including
-  `pluginManagement` and profiles, for `org.hibernate.orm:hibernate-maven-plugin`,
-  `org.hibernate.orm:hibernate-enhance-maven-plugin`, and
-  `org.hibernate:hibernate-enhance-maven-plugin`. Old-only settings are skipped when
-  a parent or another scope for the same plugin could supply the new option.
-  Same-block conflict cleanup is supported even with a parent. Duplicate elements,
-  configuration merge directives, nested element values, and unresolved plugin
-  identity require review. Parent POMs and profile activation are not evaluated.
+`pluginManagement` and profiles, for `org.hibernate.orm:hibernate-maven-plugin`,
+`org.hibernate.orm:hibernate-enhance-maven-plugin`, and
+`org.hibernate:hibernate-enhance-maven-plugin`. Old-only settings are skipped when
+a parent or another scope for the same plugin could supply the new option.
+Same-block conflict cleanup is supported even with a parent. Duplicate elements,
+configuration merge directives, nested element values, and unresolved plugin
+identity require review. Parent POMs and profile activation are not evaluated.
 * Ant: Unnamespaced project documents with an explicit same-document `taskdef`
-  whose classname is `org.hibernate.tool.enhance.EnhancementTask`. Arbitrary literal
-  task aliases and property-valued attributes are supported. Conditional, dynamic,
-  competing, imported, resource-based, namespaced, or macro-based task configuration
-  requires manual review.
+whose classname is `org.hibernate.tool.enhance.EnhancementTask`. Arbitrary literal
+task aliases and property-valued attributes are supported. Conditional, dynamic,
+competing, imported, resource-based, namespaced, or macro-based task configuration
+requires manual review.
 
 Recognized skipped candidates use `SkippedMigrations` with reason codes
 `ENHANCEMENT_IDENTITY_UNRESOLVED`, `ENHANCEMENT_CONFIGURATION_AMBIGUOUS`,
@@ -108,16 +130,86 @@ assertions, recipe discovery, diagnostics, and fresh-parser idempotence across t
 supported build formats. Target Hibernate tooling execution is not covered by those
 checks; the chosen tooling release must expose `enableClientEnhancement`.
 
-== Limitations and optional migrations
+=== `MigrateOrmCoordinates`
 
-The aggregate does not run temporal conversion. See link:temporal-annotation.adoc[Modernize @Temporal mappings] for that independently selected migration.
+Migrates artifact coordinates and versions using supported Gradle, Maven, Ivy, and Maven Ant Tasks declarations.
+Its independently selectable leaves are
 
-Named-query conversion supports literal UPDATE, DELETE, and INSERT operations and preserves query text. Constants, concatenations, CTEs, leading query comments, explicit incompatible annotation members, and conflicting target containers require review. Native statements with result clauses or unsupported quoting/multiple statements remain unchanged. This is a bounded lexical check, not validation of arbitrary HQL or SQL.
+* `MigrateGradleOrmCoordinates`
+* `MigrateMavenOrmCoordinates`
+* `MigrateAntOrmCoordinates`
 
-MapKey annotations specifying both name and value remain unchanged, even when equal. XML descriptors with unsupported namespaces, versions, or schema declarations remain unchanged. Delegate conversion targets attributed EntityManager calls and emits `unwrap(java.lang.Object.class)`; independently declared overrides, method references, and name-resolution conflicts require review.
+Each requires an exact published ORM 8.0 `targetVersion`.
 
-== Validation baseline
+For example:
 
-The ORM migration is validated from Hibernate ORM 7.4.11.Final with JPA 3.2.0 to ORM 8.0.0.Beta3 with JPA 4.0.0-M7. These are validation versions, not configurable recipe options.
+[source,yaml]
+----
+type: specs.openrewrite.org/v1beta/recipe
+name: example.MigrateOrmBuild
+displayName: Migrate ORM build coordinates
+recipeList:
+  - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
+      targetVersion: 8.0.0.Beta2
+----
 
-See link:../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for diagnostic reports.
+The `orm80` aggregate supplies the version from this recipe project's configured
+migration target environment. Changing its `ormVersion` regenerates the packaged
+aggregate on the next build/publication. A published recipe JAR keeps that exact
+target; the consuming application's old dependency version does not select it.
+
+The migration uses an explicit artifact allowlist -
+
+* it updates coordinates using the historical `org.hibernate` group-id to the newer `org.hibernate.orm` group-id
+* renames `hibernate-jpamodelgen` to `hibernate-processor`
+* renames legacy Maven enhancement-plugin aliases to `org.hibernate.orm:hibernate-maven-plugin`
+
+Existing canonical declarations are also aligned.
+Validator, Search, Reactive, Tools, Models, Accessor, and other unrelated projects keep their declarations. Conflicting dependency attributes require manual review.
+
+`hibernate-entitymanager` is replaced by `org.hibernate.orm:hibernate-core`, or removed when an equivalent core declaration exists in the same dependency scope and configuration.
+Catalog aliases are retargeted to core while preserving aliases and bundle references.
+Other removed artifacts require an individually defined migration rule.
+
+Gradle support covers Groovy/Kotlin project scripts, conventional dependency
+configurations, literal plugin versions, direct string/named coordinates, and
+local TOML catalogs. Library and plugin aliases and bundle membership are preserved.
+ORM-only shared catalog versions are updated; references shared with unrelated
+libraries are replaced locally without changing the unrelated version. Catalog
+versions remain explicit unless all consumers and their platform coverage can be
+established from the supplied local build. External/programmatic catalogs,
+convention plugins, imported build scripts, settings plugin management, and
+arbitrary cross-project configuration require review.
+
+Gradle adds an ordinary `hibernate-platform` dependency in each supported library
+configuration. Maven imports the platform in the applicable project/profile
+`dependencyManagement`. Library versions are omitted only with verified selected
+BOM membership and effective management. Processors, plugins, classified/custom
+artifacts, and constraints keep explicit target versions. Existing Gradle
+`enforcedPlatform` declarations are preserved; the recipe does not introduce
+forced resolution. Other BOMs, inherited management, and external constraints can
+require retaining explicit versions. The platform also manages companion libraries,
+so review the resolved dependency graph after migration.
+
+Maven support includes project/profile dependencies, dependency management,
+plugins/plugin management, plugin dependencies, and compiler processor paths.
+Ivy support covers direct module dependencies with explicit revisions, including
+alignment of `revConstraint`. Ant support covers recognized Maven Ant Tasks
+namespaces and local task aliases. Both Ant forms keep explicit versions; adding
+a platform dependency would not provide Maven/Gradle BOM semantics. Referenced
+POM files migrate when included among the inputs. Local JAR paths, download tasks,
+custom artifact retrieval, imported/conditional task definitions, and arbitrary
+resolver implementations require manual work.
+
+`SkippedMigrations` reports skipped declarations and incomplete portions of otherwise
+successful conversions, using `ORM_COORDINATE_IDENTITY_UNRESOLVED`,
+`ORM_COORDINATE_ARTIFACT_UNSUPPORTED`, `ORM_COORDINATE_CONFLICT`,
+`ORM_COORDINATE_VERSION_UNRESOLVED`, `ORM_COORDINATE_SYNTAX_UNSUPPORTED`, and
+`ORM_PLATFORM_MANAGEMENT_UNVERIFIED`. The last reason means the coordinates were
+aligned but an explicit version was retained because management was not proven.
+Reports refer to the leaf's original input and do not add diagnostic comments.
+
+Run build validation in a new invocation after applying the migration. A recipe can
+edit the build script running Rewrite, but Gradle/Maven have already evaluated that
+script for the current invocation. Coordinate conversion does not replace the
+current source parser classpath.

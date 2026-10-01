@@ -47,7 +47,7 @@ class RecipeArtifactTest {
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
-            for (String simple : List.of("MigrateMappingXml", "MigrateQueryFlushMode", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption")) {
+            for (String simple : List.of("MigrateMappingXml", "MigrateQueryFlushMode", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption", "MigrateOrmCoordinates", "MigrateGradleOrmCoordinates", "MigrateMavenOrmCoordinates", "MigrateAntOrmCoordinates")) {
                 String name = "org.hibernate.migration.recipes.orm80." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
@@ -68,8 +68,14 @@ class RecipeArtifactTest {
                     "org.hibernate.migration.recipes.orm80.MigrateMappingXml",
                     "org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode",
                     "org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions",
-                    "org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption"
+                    "org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption",
+                    "org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates"
             ), environment.activateRecipes("org.hibernate.migration.recipes.orm80").getRecipeList().stream().map(Recipe::getName).toList());
+            Recipe coordinates = environment.activateRecipes("org.hibernate.migration.recipes.orm80").getRecipeList().getLast();
+            var validation = ValidationEnvironment.configured();
+            assertEquals(validation.value(validation.target("orm80") + ".ormVersion"),
+                    coordinates.getClass().getMethod("getTargetVersion").invoke(coordinates));
+            assertTrue(coordinates.validate().isValid());
             assertFalse(names.contains("org.hibernate.migration.recipes.jpa4.MigrateTemporalAnnotation"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateJpa3To4"));
             assertFalse(names.contains("org.hibernate.migration.recipes.MigrateHibernateOrm7To8"));

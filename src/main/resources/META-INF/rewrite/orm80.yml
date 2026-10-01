@@ -20,3 +20,5 @@ recipeList:
   - org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode
   - org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions
   - org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption
+  - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
+      targetVersion: '@orm80TargetVersion@'

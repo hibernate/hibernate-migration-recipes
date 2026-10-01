@@ -16,6 +16,8 @@ dependencies {
     implementation("org.openrewrite:rewrite-xml")
     implementation("org.openrewrite:rewrite-groovy")
     implementation("org.openrewrite:rewrite-kotlin")
+    implementation("org.openrewrite:rewrite-maven")
+    implementation("org.openrewrite:rewrite-toml")
     runtimeOnly("org.openrewrite:rewrite-java-17")
     runtimeOnly("org.openrewrite:rewrite-java-21")
     testImplementation("org.openrewrite:rewrite-test")
@@ -31,7 +33,7 @@ migrationTesting {
             ormVersion.set("7.4.11.Final")
         }
         register("orm80") {
-            ormVersion.set("8.0.0.Beta3")
+            ormVersion.set("8.0.0.Beta2")
         }
     }
     migrations {
@@ -45,6 +47,24 @@ migrationTesting {
         register("jpa30") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.0.0") }
         register("jpa31") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.1.0") }
         register("jpa32") { dependency.set("jakarta.persistence:jakarta.persistence-api:3.2.0") }
+    }
+}
+
+val orm80TargetVersion = providers.provider {
+    val migration = migrationTesting.migrations.getByName("orm80")
+    migrationTesting.environments.getByName(migration.targetEnvironment.get()).ormVersion.get().also {
+        require(it.matches(Regex("8\\.0\\.[0-9]+\\.(Final|(?:Alpha|Beta|CR)[0-9]+)"))) {
+            "The orm80 aggregate requires an exact ORM 8.0 release: $it"
+        }
+    }
+}
+tasks.processResources {
+    inputs.property("orm80TargetVersion", orm80TargetVersion)
+    filesMatching("META-INF/rewrite/orm80.yml") {
+        filter { line -> line.replace("@orm80TargetVersion@", orm80TargetVersion.get()) }
+    }
+    doLast {
+        require(!destinationDir.resolve("META-INF/rewrite/orm80.yml").readText().contains("@orm80TargetVersion@"))
     }
 }
 
@@ -68,3 +88,41 @@ val verifyBuildConvention = tasks.register<GradleBuild>("verifyBuildConvention")
     tasks = listOf("test")
 }
 tasks.check { dependsOn(verifyBuildConvention) }
+
+// Resolver tools are isolated from production recipes and from the Rewrite runtime.
+val coordinateAntTools = configurations.create("coordinateAntTools")
+val coordinateMavenTool = configurations.create("coordinateMavenTool")
+dependencies {
+    add(coordinateAntTools.name, "org.apache.ant:ant:1.10.18")
+    add(coordinateAntTools.name, "org.apache.ivy:ivy:2.5.3")
+    add(coordinateAntTools.name, "org.apache.maven:maven-ant-tasks:2.1.3")
+    add(coordinateMavenTool.name, "org.apache.maven:apache-maven:3.9.11:bin@zip")
+}
+val prepareCoordinateMaven = tasks.register<Sync>("prepareCoordinateMaven") {
+    from(coordinateMavenTool.map { zipTree(it) })
+    into(layout.buildDirectory.dir("coordinate-tools/maven"))
+}
+afterEvaluate {
+    val fixtureDirectory = layout.buildDirectory.dir("converted-build-fixtures/orm80")
+    val generateCoordinateBuildFixtures = tasks.register<JavaExec>("generateCoordinateBuildFixtures") {
+        group = "verification"
+        description = "Generates actual migrated build files for resolver verification."
+        classpath = sourceSets.getByName("conversionTestOrm80").runtimeClasspath
+        mainClass.set("org.hibernate.migration.recipes.orm80.OrmCoordinateBuildFixtures")
+        dependsOn("conversionTestOrm80Classes", "verifyMigrationEnvironments")
+        inputs.file(layout.buildDirectory.file("migration-testing/environments.properties"))
+        outputs.dir(fixtureDirectory)
+        systemProperty("migration.metadata", layout.buildDirectory.file("migration-testing/environments.properties").get().asFile.absolutePath)
+        systemProperty("coordinate.fixtures", fixtureDirectory.get().asFile.absolutePath)
+        doFirst { delete(fixtureDirectory) }
+    }
+    tasks.named<Test>("conversionTestOrm80") {
+        dependsOn(generateCoordinateBuildFixtures, prepareCoordinateMaven)
+        inputs.dir(fixtureDirectory)
+        inputs.files(coordinateAntTools, coordinateMavenTool)
+        systemProperty("coordinate.fixtures", fixtureDirectory.get().asFile.absolutePath)
+        systemProperty("coordinate.antClasspath", coordinateAntTools.asPath)
+        systemProperty("coordinate.mavenHome", layout.buildDirectory.dir("coordinate-tools/maven/apache-maven-3.9.11").get().asFile.absolutePath)
+        systemProperty("coordinate.gradleExecutable", gradle.gradleHomeDir!!.resolve("bin/gradle").absolutePath)
+    }
+}

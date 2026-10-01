@@ -4,8 +4,7 @@ import org.openrewrite.Column;
 import org.openrewrite.DataTable;
 import org.openrewrite.Recipe;
 
-/// Reports migration candidates that a recipe deliberately leaves unchanged because
-/// it cannot safely convert them.
+/// Reports migration candidates or portions of a migration that require manual review.
 ///
 /// Leaf recipes insert rows identifying the source location and the reason manual
 /// review is needed. This table records those decisions; it does not modify source
@@ -20,7 +19,7 @@ public class SkippedMigrations extends DataTable<SkippedMigrations.Row> {
         super(recipe, "Skipped Hibernate migrations", "Source locations and reasons for migrations requiring manual review.");
     }
 
-    /// An unchanged migration candidate and the explanation for skipping it.
+    /// A migration candidate and the explanation for skipping all or part of its conversion.
     ///
     /// Coordinates are one-based and refer to the leaf recipe's input, which may
     /// already contain changes made by earlier recipes in a composite migration.
@@ -37,12 +36,12 @@ public class SkippedMigrations extends DataTable<SkippedMigrations.Row> {
         private final int column;
         @Column(displayName = "Subject", description = "Annotation, method, or XML root.")
         private final String subject;
-        @Column(displayName = "Reason code", description = "Stable reason for leaving the candidate unchanged.")
+        @Column(displayName = "Reason code", description = "Stable reason for leaving all or part of the candidate unchanged.")
         private final String reasonCode;
         @Column(displayName = "Message", description = "Explanation of the unsupported input.")
         private final String message;
 
-        /// Creates a report entry for a candidate left unchanged.
+        /// Creates a report entry for a candidate left wholly or partially unchanged.
         ///
         /// @param recipe the leaf recipe identifier
         /// @param sourcePath the source-relative file path
