@@ -10,7 +10,8 @@ description: >-
   QueryFlushMode enum with Jakarta Persistence's QueryFlushMode, and relocates
   multi-ID loading options to nested FindMultipleOption types, and renames the
   client enhancement option in supported build configurations, migrates custom-SQL
-  result verification, and migrates Java optimistic-lock exclusion annotations.
+  result verification, migrates query-hint constants while preserving their keys,
+  and migrates Java optimistic-lock exclusion annotations.
 recipeList:
   - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
   - org.hibernate.migration.recipes.jpa4.MigratePersistenceXml
@@ -19,6 +20,7 @@ recipeList:
   - org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue
   - org.hibernate.migration.recipes.orm80.MigrateMappingXml
   - org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode
+  - org.hibernate.migration.recipes.orm80.MigrateQueryHints
   - org.hibernate.migration.recipes.orm80.MigrateOptimisticLockExclusion
   - org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions
   - org.hibernate.migration.recipes.orm80.MigrateSqlResultVerification
