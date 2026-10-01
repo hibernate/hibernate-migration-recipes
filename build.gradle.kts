@@ -114,6 +114,7 @@ afterEvaluate {
         doFirst { delete(fixtureDirectory) }
     }
     tasks.named<Test>("conversionTestOrm80") {
+        maxParallelForks = 2
         exclude("**/OrmCoordinateResolutionTest.class", "**/OrmCoordinateResourceTest.class")
     }
     val buildToolTestOrm80 = tasks.register<Test>("buildToolTestOrm80") {
