@@ -179,6 +179,9 @@ Use the Gradle wrapper with a JDK supported by Gradle and the project dependenci
 # One ORM recipe's conversion tests
 ./gradlew conversionTestOrm80 --tests '*MigrateMapKeyNameToValueTest'
 
+# Build-tool resolution and incremental resource checks
+./gradlew buildToolTestOrm80
+
 # Generate ORM 8 integration fixtures without executing runtime tests
 ./gradlew generateConvertedFixturesOrm80
 
@@ -192,7 +195,7 @@ Use the Gradle wrapper with a JDK supported by Gradle and the project dependenci
 ./gradlew -p buildSrc test
 ----
 
-`test` alone is not full recipe verification. `check` includes the registered conversion suites, environment verification, ordinary unit tests, and `verifyBuildConvention`. The last task runs the separate `buildSrc` test build.
+`test` alone is not full recipe verification. `check` includes the registered conversion suites, build-tool verification, environment verification, ordinary unit tests, and `verifyBuildConvention`. The last task runs the separate `buildSrc` test build.
 
 Pinned tooling: Gradle 9.8.0, Rewrite BOM 3.37.0 (Rewrite 8.89.0), JUnit 6.1.3. The current ORM integration suite uses H2 2.5.252.
 
@@ -215,7 +218,19 @@ checks. Source and target versions come from the migration environments. Maven
 3.9.11, Ivy 2.5.3, Maven Ant Tasks 2.1.3, and Ant 1.10.18 are isolated test tools;
 they are not production recipe dependencies. Maven Ant Tasks uses an HTTPS mirror
 and a dedicated local repository. Resolver caches are separate from generated files.
-The Gradle checks use the project's running Gradle distribution.
+The Gradle checks use the project's running Gradle distribution and reuse compatible
+daemons across fixture builds.
+
+`buildToolTestOrm80` owns external resolver and incremental resource checks. It is
+included in `check`; `conversionTestOrm80` runs recipe conversion tests without
+generating resolver fixtures or preparing Maven. Both tasks use the conversion
+SourceSet's compiled classes, with disjoint test selection.
+
+Generated build files remain under `build/converted-build-fixtures/orm80`.
+Resolver logs, reports, effective POMs, build output, and Gradle project caches go
+under `build/build-tool-tests/orm80`, so test execution does not change generator
+outputs or test inputs. The resource test uses its own temporary project because
+it deliberately edits the build configuration between executions.
 
 Production resource processing substitutes the aggregate coordinate target from
 `orm80`'s configured target environment. A resource regression test changes that
