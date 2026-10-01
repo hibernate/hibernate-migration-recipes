@@ -74,9 +74,8 @@ Conversion tests and generators consume these original file contents, not the
 compiled input classes.
 
 Keep target compilation and fresh-target idempotence validation with `ApiValidation`.
-Compilation of this SourceSet validates only the primary source environment;
-applicable supplementary JPA profiles are still checked separately by conversion
-tests. Deliberately invalid or attribution-deficient inputs stay outside the compiled
+Compilation of this SourceSet validates the source ORM/JPA environment.
+Deliberately invalid or attribution-deficient inputs stay outside the compiled
 SourceSet. Inputs that require target-only APIs also stay outside this source
 SourceSet. Expected-output text and small assertions about preserved source
 regions may remain inline; XML-specific tests continue to construct their XML
@@ -105,7 +104,6 @@ The root `build.gradle.kts` applies `org.hibernate.migration-testing`, implement
 
 * `environments`: reusable named ORM releases.
 * `migrations`: source and target environment names, a database dependency, and optionally a fixture-generator main class.
-* `supplementaryApis`: additional API-only profiles for regression coverage.
 
 The current environment and migration declarations are:
 
@@ -130,7 +128,7 @@ migrationTesting {
 }
 ----
 
-The current path is `orm74` (ORM 7.4.11.Final, JPA 3.2.0) to `orm80` (ORM 8.0.0.Beta2, JPA 4.0.0-M7). JPA versions come from the published ORM dependencies. Supplementary JPA 3.0, 3.1, and 3.2 profiles provide additional regression coverage, not additional Hibernate migration paths; they do not override JPA in either ORM environment.
+The current path is `orm74` (ORM 7.4.11.Final, JPA 3.2.0) to `orm80` (ORM 8.0.0.Beta2, JPA 4.0.0-M7). JPA versions come from the published ORM dependencies. Conversion tests use the source ORM environment, which includes its published JPA API.
 
 XML validation uses schemas from the target ORM JAR under `org/hibernate/jpa/` and `org/hibernate/xsd/mapping/`. Published ORM artifacts come from Maven Central; no local ORM build or publication is required.
 

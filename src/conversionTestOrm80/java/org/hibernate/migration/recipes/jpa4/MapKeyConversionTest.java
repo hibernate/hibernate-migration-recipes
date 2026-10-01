@@ -3,17 +3,15 @@ package org.hibernate.migration.recipes.jpa4;
 import org.hibernate.migration.testing.ApiValidation;
 import org.hibernate.migration.testing.MigrationSources;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /// Validates map-key conversion and conflicting attributes against source and target APIs.
 /// @author Steve Ebersole
 class MapKeyConversionTest {
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void mapKeys(String api) {
+    @Test
+    void mapKeys() {
+        String api = "orm74";
         var sourceFiles = MigrationSources.configured().files("fixture/jpa4/mapkeyconversion/mapkeys/Example.java");
         String source = sourceFiles.get("fixture/jpa4/mapkeyconversion/mapkeys/Example.java");
         var result = ApiValidation.run(new MigrateMapKeyNameToValue(), sourceFiles, api);

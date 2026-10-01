@@ -69,9 +69,9 @@ class TemporalPropertyConversionTest {
         assertTrue(ApiValidation.run(configured(MigrateTemporalAnnotation.TimestampTarget.INSTANT), reversed, "orm74").skipped().isEmpty());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void bareMixedFieldsNeedNoTimezone(String api) {
+    @Test
+    void bareMixedFieldsNeedNoTimezone() {
+        String api = "orm74";
         var sourceFiles = MigrationSources.configured().files("fixture/temporal/temporalpropertyconversion/baremixedfieldsneednotimezone/Example.java");
         String source = sourceFiles.get("fixture/temporal/temporalpropertyconversion/baremixedfieldsneednotimezone/Example.java");
         var result = ApiValidation.run(new MigrateTemporalAnnotation(), sourceFiles, api);

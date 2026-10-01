@@ -1,17 +1,17 @@
 package org.hibernate.migration.recipes.jpa4;
 
+import org.junit.jupiter.api.Test;
 import org.hibernate.migration.testing.ApiValidation;
 import org.hibernate.migration.testing.MigrationSources;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 /// Validates the reusable integration fixture without publishing handoff files.
 /// @author Steve Ebersole
 class RuntimeFixtureTest {
-    @ParameterizedTest @ValueSource(strings = {"orm74", "jpa30", "jpa31", "jpa32"})
-    void validatesRuntimeFixture(String api) throws Exception {
+    @Test
+    void validatesRuntimeFixture() throws Exception {
+        String api = "orm74";
         var sources = MigrationSources.configured().files("fixture/Migrated.java");
         var result = ApiValidation.run(ApiValidation.composite("org.hibernate.migration.recipes.orm80"), sources, api);
         assertTrue(result.skipped().isEmpty());

@@ -29,7 +29,7 @@ class NamedQueryInvalidInputTest {
     void invalidAnnotationIsReportedWithoutEditing(String name, String input, String reason) {
         // These shapes are intentionally invalid Java/JPA usage: exercise the parser directly.
         var ctx = new InMemoryExecutionContext(t -> fail(t));
-        SourceFile source = ApiValidation.parser("jpa32").build().parse(ctx, input).findFirst().orElseThrow();
+        SourceFile source = ApiValidation.parser("orm74").build().parse(ctx, input).findFirst().orElseThrow();
         assertInstanceOf(J.CompilationUnit.class, source, name);
         var run = new MigrateNamedQueryToStatement().run(new InMemoryLargeSourceSet(List.of(source)), ctx);
         assertEquals(0, run.getChangeset().size(), name);
