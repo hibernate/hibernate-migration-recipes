@@ -67,6 +67,36 @@ Replaces Java references to `org.hibernate.query.QueryFlushMode`
 with `jakarta.persistence.QueryFlushMode`, including static imports, declarations,
 and named-query annotation values.
 
+=== `MigrateQueryHints`
+
+Replaces Java constants from `org.hibernate.jpa.QueryHints` with explicit,
+field-by-field mappings to `HibernateHints`, `SpecHints`, and `LegacySpecHints`
+in the same package. It is independently selectable and included in `orm80`.
+Qualified references, explicit and wildcard static imports, and annotation
+values are supported; naming conflicts use fully qualified references.
+
+The exact hint keys and supplied values are preserved. In particular,
+`HINT_READONLY` becomes `HibernateHints.HINT_READ_ONLY`, `HINT_NATIVE_LOCKMODE`
+becomes `HibernateHints.HINT_NATIVE_LOCK_MODE`, and both Jakarta fetch/load
+graph aliases become the corresponding `SpecHints.HINT_SPEC_FETCH_GRAPH` or
+`HINT_SPEC_LOAD_GRAPH`. `JAKARTA_SPEC_HINT_TIMEOUT` becomes
+`SpecHints.HINT_SPEC_QUERY_TIMEOUT`.
+
+`HINT_FETCHGRAPH`, `HINT_LOADGRAPH`, and `SPEC_HINT_TIMEOUT` retain their
+`javax.persistence` keys through `LegacySpecHints.HINT_JAVAEE_FETCH_GRAPH`,
+`HINT_JAVAEE_LOAD_GRAPH`, and `HINT_JAVAEE_QUERY_TIMEOUT` respectively.
+`HINT_FOLLOW_ON_LOCKING` retains that key under `HibernateHints`; it is not
+changed to the distinct follow-on strategy key. Hibernate timeout values remain
+in seconds and specification timeout values remain in milliseconds.
+
+Nonconstant uses, including declarations, class literals, methods such as
+`getDefinedHints()`, and instance-qualified field accesses, require manual
+migration. Safe constants in the same file still migrate. `SkippedMigrations`
+reports retained uses as `UNSUPPORTED_QUERY_HINT_USAGE`, unresolved candidates
+as `MISSING_TYPE_ATTRIBUTION`, and attributed fields without a mapping as
+`UNMAPPED_QUERY_HINT_CONSTANT`, at original leaf-input coordinates. Retained
+uses may prevent compilation against ORM 8 until manually migrated.
+
 === `MigrateOptimisticLockExclusion`
 
 Replaces `org.hibernate.annotations.OptimisticLock(excluded = true)` on Java fields
