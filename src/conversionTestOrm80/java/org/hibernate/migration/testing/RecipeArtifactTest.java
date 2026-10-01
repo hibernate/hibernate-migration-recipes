@@ -47,7 +47,7 @@ class RecipeArtifactTest {
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
-            for (String simple : List.of("MigrateMappingXml", "MigrateSqlResultVerification", "MigrateQueryFlushMode", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption", "MigrateOrmCoordinates", "MigrateGradleOrmCoordinates", "MigrateMavenOrmCoordinates", "MigrateAntOrmCoordinates")) {
+            for (String simple : List.of("MigrateMappingXml", "MigrateOptimisticLockExclusion", "MigrateSqlResultVerification", "MigrateQueryFlushMode", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption", "MigrateOrmCoordinates", "MigrateGradleOrmCoordinates", "MigrateMavenOrmCoordinates", "MigrateAntOrmCoordinates")) {
                 String name = "org.hibernate.migration.recipes.orm80." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
@@ -67,6 +67,7 @@ class RecipeArtifactTest {
                     "org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue",
                     "org.hibernate.migration.recipes.orm80.MigrateMappingXml",
                     "org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode",
+                    "org.hibernate.migration.recipes.orm80.MigrateOptimisticLockExclusion",
                     "org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions",
                     "org.hibernate.migration.recipes.orm80.MigrateSqlResultVerification",
                     "org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption",

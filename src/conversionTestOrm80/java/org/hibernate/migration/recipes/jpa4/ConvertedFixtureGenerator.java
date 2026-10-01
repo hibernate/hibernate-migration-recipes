@@ -29,6 +29,10 @@ public final class ConvertedFixtureGenerator {
                 recipe = ApiValidation.composite(entry.recipe());
                 sources = MigrationSources.configured().files("fixture/sqlverification/RuntimeEntities.java");
             }
+            else if (entry.fixture().equals("optimistic")) {
+                recipe = ApiValidation.composite(entry.recipe());
+                sources = MigrationSources.configured().files("fixture/optimistic/RuntimeEntity.java");
+            }
             else if (entry.fixture().startsWith("temporal")) {
                 var target = MigrateTemporalAnnotation.TimestampTarget.valueOf(entry.fixture().substring("temporal".length()).toUpperCase(java.util.Locale.ROOT));
                 recipe = new MigrateTemporalAnnotation(target, true, "+02:00", "Europe/Paris",

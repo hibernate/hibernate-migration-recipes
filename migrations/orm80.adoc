@@ -67,6 +67,35 @@ Replaces Java references to `org.hibernate.query.QueryFlushMode`
 with `jakarta.persistence.QueryFlushMode`, including static imports, declarations,
 and named-query annotation values.
 
+=== `MigrateOptimisticLockExclusion`
+
+Replaces `org.hibernate.annotations.OptimisticLock(excluded = true)` on Java fields
+and getters with `jakarta.persistence.ExcludedFromVersioning`. Existing matching
+exclusions are retained and the redundant legacy annotation is removed. Import
+collisions use a fully qualified replacement; comments are preserved.
+
+Explicit `excluded = false` is removed only for directly mapped `@Basic`,
+`@ElementCollection`, and owning `@OneToMany`/`@ManyToMany` attributes whose
+`mappedBy` is omitted or the literal empty string. Inverse collections, to-one
+associations, implicit or embedded mappings, mixed field/getter declarations,
+access configuration, mapping overrides, and custom Hibernate mappings require
+review. External XML overrides are not evaluated; review against effective mappings
+when using them.
+
+Conflicting or duplicate annotations remain unchanged. Nonliteral boolean values,
+unsupported annotation shapes, and explicitly identified but unresolved Hibernate
+annotations are also retained. `SkippedMigrations` reports these cases using
+`OPTIMISTIC_LOCK_CONFLICT`, `OPTIMISTIC_LOCK_DEFAULT_UNVERIFIED`,
+`OPTIMISTIC_LOCK_VALUE_UNSUPPORTED`, `UNSUPPORTED_ANNOTATION_SHAPE`, or
+`MISSING_TYPE_ATTRIBUTION` at original leaf-input coordinates.
+
+The recipe is independently selectable and included in `orm80`. Conversion checks
+cover source/target compilation and fresh-target idempotence; runtime checks verify
+version behavior for excluded basic attributes, included basic attributes, and an
+owning collection. XML optimistic-lock migration is deferred pending
+https://github.com/hibernate/hibernate-migration-recipes/issues/39[issue #39] and
+https://github.com/jakartaee/persistence/issues/1190[JPA issue #1190].
+
 === `MigrateFindMultipleOptions`
 
 Relocates Java references to `org.hibernate.OrderingMode`,
