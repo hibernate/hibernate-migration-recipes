@@ -29,9 +29,25 @@ jobs:
         with:
           java-version: '25'
           distribution: temurin
+          cache: gradle
 
-      - name: Build and run all checks
-        run: ./gradlew build --no-daemon --stacktrace
+      - name: Cache resolver repositories
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/converted-build-fixtures/resolver-cache/maven
+            build/converted-build-fixtures/resolver-cache/ivy
+            build/converted-build-fixtures/resolver-cache/ant
+          key: isolated-resolvers-v1-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'buildSrc/src/main/kotlin/MigrationTestingPlugin.kt', 'src/main/resources/META-INF/rewrite/orm80.yml', 'src/conversionTestOrm80/java/org/hibernate/migration/recipes/orm80/OrmCoordinate*.java') }}
+          restore-keys: |
+            isolated-resolvers-v1-${{ runner.os }}-
+
+      # Avoid CPU contention between the conversion forks and other verification tasks.
+      - name: Run conversion tests in isolation
+        run: ./gradlew conversionTestOrm80 --daemon --stacktrace
+
+      - name: Build and run remaining checks
+        run: ./gradlew build --daemon --stacktrace -x conversionTestOrm80
 
       - name: Upload test results and reports
         if: always()
