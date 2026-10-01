@@ -232,6 +232,14 @@ under `build/build-tool-tests/orm80`, so test execution does not change generato
 outputs or test inputs. The resource test uses its own temporary project because
 it deliberately edits the build configuration between executions.
 
+Ordinary recipe execution contexts created by `RecipeExecutionContexts.standard`
+share an in-memory Maven POM cache within one JVM, including fresh idempotence
+runs. The first lookup resolves the published Hibernate platform BOM; later
+lookups reuse the resolved metadata. Recipe state and diagnostics stay local to
+each execution context. Tests that customize repositories, mirrors, or credentials,
+or exercise resolution failures, must use a fresh `InMemoryExecutionContext` with
+its isolated cache. External build-tool processes continue using their own caches.
+
 Production resource processing substitutes the aggregate coordinate target from
 `orm80`'s configured target environment. A resource regression test changes that
 configuration and verifies incremental regeneration without ORM resolution.
