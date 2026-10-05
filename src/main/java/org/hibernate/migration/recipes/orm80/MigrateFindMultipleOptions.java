@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.hibernate.migration.recipes.support.ChangeTypeSupport;
 import org.jspecify.annotations.NonNull;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
-import org.openrewrite.java.ChangeType;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaVisitor;
 import org.openrewrite.java.search.UsesType;
@@ -85,18 +85,7 @@ public class MigrateFindMultipleOptions extends Recipe {
 					if (new UsesType<ExecutionContext>(oldType, false).visitNonNull(migrated, ctx) == migrated) {
 						continue;
 					}
-					boolean[] conflict = {false};
-					new JavaIsoVisitor<boolean[]>() {
-						@Override
-						public J.@NonNull Identifier visitIdentifier(J.@NonNull Identifier identifier, boolean @NonNull [] found) {
-							if (option.equals(identifier.getSimpleName())
-									&& !TypeUtils.isOfClassType(identifier.getType(), oldType)
-									&& !TypeUtils.isOfClassType(identifier.getType(), newType)) {
-								found[0] = true;
-							}
-							return super.visitIdentifier(identifier, found);
-						}
-					}.visit(cu, conflict);
+					boolean conflict = ChangeTypeSupport.hasNameConflict(cu, option, oldType, newType);
 
 					J.CompilationUnit before = migrated;
 					// ChangeType also recognizes fully qualified names by spelling. Shield references
@@ -116,8 +105,8 @@ public class MigrateFindMultipleOptions extends Recipe {
 							return super.visitFieldAccess(access, context);
 						}
 					}.visitNonNull(migrated, ctx);
-					migrated = (J.CompilationUnit) new ChangeType(oldType, newType, true)
-							.getVisitor().visitNonNull(migrated, ctx, getCursor().getParentOrThrow());
+					migrated = ChangeTypeSupport.changeTypePreservingWildcards(
+							migrated, before, oldType, newType, ctx, getCursor().getParentOrThrow());
 					migrated = (J.CompilationUnit) new JavaVisitor<ExecutionContext>() {
 						@Override
 						public @NonNull J visitIdentifier(
@@ -146,20 +135,9 @@ public class MigrateFindMultipleOptions extends Recipe {
 						}
 					}.visitNonNull(migrated, ctx);
 
-					// Preserve a wildcard even when ChangeType also recreates explicit static imports.
-					for (J.Import original : before.getImports()) {
-						if (original.isStatic() && oldType.equals(original.getTypeName())
-								&& "*".equals(original.getQualid().getSimpleName())
-								&& migrated.getImports().stream().noneMatch(imp -> imp.isStatic()
-										&& TypeUtils.fullyQualifiedNamesAreEqual(newType, imp.getTypeName())
-										&& "*".equals(imp.getQualid().getSimpleName()))) {
-							Expression target = TypeTree.build(newType).withType(JavaType.ShallowClass.build(newType));
-							var imports = new ArrayList<>(migrated.getImports());
-							imports.add(original.withQualid(original.getQualid().withTarget(target)));
-							migrated = migrated.withImports(imports);
-						}
-					}
-					if (conflict[0]) {
+					if (conflict) {
+						// Inner class types need manual FieldAccess construction to produce dot-separated
+						// source spelling; FullyQualifyTypeReference does not convert $ to dot notation.
 						migrated = (J.CompilationUnit) new JavaVisitor<ExecutionContext>() {
 							@Override
 							public @NonNull J visitIdentifier(
