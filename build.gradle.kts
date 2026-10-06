@@ -91,7 +91,7 @@ val coordinateAntTools = configurations.create("coordinateAntTools")
 val coordinateMavenTool = configurations.create("coordinateMavenTool")
 dependencies {
     add(coordinateAntTools.name, "org.apache.ant:ant:1.10.18")
-    add(coordinateAntTools.name, "org.apache.ivy:ivy:2.5.3")
+    add(coordinateAntTools.name, "org.apache.ivy:ivy:2.6.0")
     add(coordinateAntTools.name, "org.apache.maven:maven-ant-tasks:2.1.3")
     add(coordinateMavenTool.name, "org.apache.maven:apache-maven:3.9.11:bin@zip")
 }
