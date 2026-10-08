@@ -16,6 +16,7 @@ class OrmCoordinateResourceTest {
         Path repository = Path.of(System.getProperty("user.dir"));
         copy(repository.resolve("build.gradle.kts"), project.resolve("build.gradle.kts"));
         copy(repository.resolve("settings.gradle.kts"), project.resolve("settings.gradle.kts"));
+        copy(repository.resolve("version.txt"), project.resolve("version.txt"));
         copy(repository.resolve("buildSrc/build.gradle.kts"), project.resolve("buildSrc/build.gradle.kts"));
         copy(repository.resolve("buildSrc/src/main/kotlin/MigrationTestingPlugin.kt"), project.resolve("buildSrc/src/main/kotlin/MigrationTestingPlugin.kt"));
         copy(repository.resolve("src/main/resources/META-INF/rewrite/orm80.yml"), project.resolve("src/main/resources/META-INF/rewrite/orm80.yml"));
