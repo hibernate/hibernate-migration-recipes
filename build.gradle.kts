@@ -1,11 +1,83 @@
 plugins {
     id("java")
+    id("maven-publish")
     id("org.hibernate.migration-testing")
 }
 
 group = "org.hibernate.migration"
-version = "1.0-SNAPSHOT"
+version = providers.fileContents(layout.projectDirectory.file("version.txt")).asText.get().trim()
+require(version.toString().matches(Regex("(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-SNAPSHOT)?"))) {
+    "version.txt must contain MAJOR.MINOR.PATCH with an optional -SNAPSHOT suffix"
+}
 repositories { mavenCentral() }
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+tasks.jar {
+    metaInf { from("LICENSE") }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("recipes") {
+            from(components["java"])
+            pom {
+                name.set("Hibernate Migration Recipes")
+                description.set("OpenRewrite recipes for migrating applications across Hibernate versions")
+                url.set("https://github.com/hibernate/hibernate-migration-recipes")
+                organization {
+                    name.set("Hibernate.org")
+                    url.set("https://hibernate.org")
+                }
+                licenses {
+                    license {
+                        name.set("Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                        distribution.set("repo")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/hibernate/hibernate-migration-recipes")
+                    connection.set("scm:git:https://github.com/hibernate/hibernate-migration-recipes.git")
+                    developerConnection.set("scm:git:git@github.com:hibernate/hibernate-migration-recipes.git")
+                }
+                issueManagement {
+                    system.set("GitHub")
+                    url.set("https://github.com/hibernate/hibernate-migration-recipes/issues")
+                }
+                developers {
+                    developer {
+                        id.set("hibernate-team")
+                        name.set("The Hibernate Development Team")
+                        organization.set("Hibernate.org")
+                        organizationUrl.set("https://hibernate.org")
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "staging"
+            url = uri(layout.buildDirectory.dir("staging-deploy/maven"))
+        }
+    }
+}
+
+tasks.register("releasePrepare") {
+    group = "publishing"
+    description = "Stages the recipe publication locally; does not verify or publish a release remotely."
+    dependsOn("publishAllPublicationsToStagingRepository")
+}
+
+val cleanReleaseStaging = tasks.register<Delete>("cleanReleaseStaging") {
+    delete(layout.buildDirectory.dir("staging-deploy/maven"))
+}
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(cleanReleaseStaging)
+}
 
 val rewriteBomVersion = "3.37.0"
 val junitVersion = "6.1.3"
@@ -133,7 +205,7 @@ afterEvaluate {
         inputs.files(coordinateAntTools, coordinateMavenTool)
         inputs.file(layout.buildDirectory.file("migration-testing/environments.properties"))
         // The resource test creates a separate project from these actual build inputs.
-        inputs.files("build.gradle.kts", "settings.gradle.kts", "buildSrc/build.gradle.kts",
+        inputs.files("build.gradle.kts", "settings.gradle.kts", "version.txt", "buildSrc/build.gradle.kts",
             "buildSrc/src/main/kotlin/MigrationTestingPlugin.kt", "src/main/resources/META-INF/rewrite/orm80.yml")
         localState.register(executionDirectory)
         systemProperty("migration.metadata", layout.buildDirectory.file("migration-testing/environments.properties").get().asFile.absolutePath)
