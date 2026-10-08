@@ -96,6 +96,21 @@ Keep the target runtime classpath separate from source-version and production re
 
 Keep syntax variations and unchanged-input checks in the conversion suite. Add runtime coverage when a transformation changes behavior that compilation cannot establish.
 
+=== ORM 8.0 recipe coverage
+
+XML conversion tests validate source and target descriptors against schemas from
+pinned published ORM artifacts. Runtime tests verify package annotation discovery
+and table/column comment metadata using actual recipe output.
+
+Optimistic-lock exclusion conversion checks cover source/target compilation and
+fresh-target idempotence. Runtime checks verify version behavior for excluded basic
+attributes, included basic attributes, and an owning collection.
+
+The client enhancement option migration is tested through structured parsing,
+exact output assertions, recipe discovery, diagnostics, and fresh-parser idempotence
+across the supported build formats. These checks do not execute target Hibernate
+tooling; the chosen tooling release must expose `enableClientEnhancement`.
+
 == Current build convention: Hibernate ORM
 
 The testing model above applies across projects, but the current convention implements ORM environments specifically. It resolves Hibernate Core, verifies ORM/JPA dependency identities, and requires a database dependency. Adding another Hibernate project requires extending this build support; a different migration name alone does not provide that support.

@@ -1,79 +1,416 @@
 = Hibernate ORM 7.4 to 8.0
 :toc2:
-:fn-xml: footnote:xml[See link:xml-descriptors.adoc[the XML migration guide] for supported namespaces, versions, package descriptors, and comment handling.]
+:toclevels: 3
+:toc
 
-Select `org.hibernate.migration.recipes.orm80` (`orm80`) for the aggregate ORM 7.4 to 8.0 upgrade.
+OpenRewrite recipes for migrating applications to Hibernate ORM 8.0 and Jakarta Persistence 4.0, from Hibernate ORM 7.4 and Jakarta Persistence 3.2.
 
-[NOTE]
-The migration for link:temporal-annotation.adoc[Modernizing @Temporal mappings] is not part of this recipe.
+== Running the migration
 
+The main aggregate recipe is named `org.hibernate.migration.recipes.orm80`.  Select it for the aggregate ORM 7.4 to 8.0 upgrade.
 
-== Enabling with Gradle
+For example, in Gradle -
 
-With the OpenRewrite Gradle plugin applied and this project's recipe JAR added to the `rewrite` dependency configuration, add this to your application's `build.gradle`:
+* apply the OpenRewrite plugin
+* add `hibernate-migration-recipes` as a dependency
+* activate this recipe
 
 [source,groovy]
+.Enabling with Gradle (versions omitted)
 ----
+plugins {
+    id 'java'
+    id 'org.openrewrite.rewrite'
+}
+
+dependencies {
+    rewrite "org.hibernate.migration:hibernate-migration-recipes"
+}
+
 rewrite {
-    activeRecipe("org.hibernate.migration.recipes.orm80")
+    activeRecipe('org.hibernate.migration.recipes.orm80')
     exportDatatables = true
 }
 ----
 
-Preview the changes with `./gradlew rewriteDryRun`, then apply them with `./gradlew rewriteRun`.
+Preview the changes with `./gradlew rewriteDryRun`.
+Apply them with `./gradlew rewriteRun`.
 See the https://docs.openrewrite.org/reference/gradle-plugin-configuration[OpenRewrite Gradle plugin documentation] for plugin and dependency setup.
 
-See link:../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for diagnostic reports.
+See link:../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for details about diagnostic reports.
 
-== Jakarta Persistence 4.0 Recipes
+NOTE: The rest of this documentation will refer to this aggregate recipe as `orm80`.
 
-Jakarta Persistence 4.0 migrations live in the `org.hibernate.migration.recipes.jpa4` package.
+All recipes listed below are included in this `orm80` aggregate recipe, but may also be selected independently
+using their fully qualified recipe (class) names. XML-only selection is shown in <<xml-descriptors>>.
 
-=== `MigrateNamedQueryToStatement`
 
-Migrates `@NamedQuery` annotations which represent INSERT, UPDATE or DELETE statements to `@NamedStatement`.
+== Jakarta Persistence 4.0 recipes
 
-=== `MigratePersistenceXml`
+[[_MigrateNamedQueryToStatement]]
+=== MigrateNamedQueryToStatement
 
-Migrates `persistence.xml` files updating the version to 4.0 and converting `<class>some.package.package-info</class>` references to `<package-descriptor>some.package</package-descriptor>`.{fn-xml}
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement`.
 
-=== `MigrateOrmXml`
+Migrates named mutation query annotations to Jakarta Persistence 4.0 statement annotations.
 
-Migrates `orm.xml` files updating the version to 4.0.{fn-xml}
+==== Conversions
 
-=== `MigrateEntityManagerGetDelegate`
+Converts supported INSERT, UPDATE, and DELETE `@NamedQuery` annotations to
+`@NamedStatement`, and `@NamedNativeQuery` annotations to `@NamedNativeStatement`.
+Supported entries in query containers are extracted as statement annotations;
+SELECT queries and unsupported entries remain in their query containers.
+Names, query text, hints, and comments are preserved.
 
-Migrates calls to `EntityManager.getDelegate()` to `EntityManager.unwrap(Object.class)`
+==== Supported inputs
 
-=== `MigrateMapKeyNameToValue`
+Jakarta Persistence annotations on class and interface declarations, including
+repeatable query containers, with explicit `name` and literal `query` members.
+Only members supported by the target statement annotation are migrated.
 
-Migrates `@MapKey(name="the-name")` references to `@MapKey("the-name")`
+==== Manual review
 
-== Hibernate 8.0 Recipes
+Query constants and expressions, unsupported query forms or annotation shapes,
+incompatible members, unsupported annotation locations, and existing explicit
+target statement containers require review. Native SQL with result clauses or
+unsupported syntax is retained. Recognized skipped candidates are reported through
+`SkippedMigrations`; unresolved annotations use `MISSING_TYPE_ATTRIBUTION`.
 
-Hibernate-specific recipes live in the `org.hibernate.migration.recipes.orm80` package.
 
-=== `MigrateMappingXml`
+[[_MigratePersistenceXml]]
+=== MigratePersistenceXml
 
-Migrates Hibernate's `mapping.xml` files{fn-xml}
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigratePersistenceXml`.
+
+Migrates `persistence.xml` files updating the version to 4.0.
+
+==== Conversions
+
+`org.hibernate.migration.recipes.jpa4.MigratePersistenceXml` converts explicit dot-separated package references:
+
+[source,xml]
+----
+<class>com.acme.model.package-info</class>
+----
+
+becomes:
+
+[source,xml]
+----
+<package-descriptor>com.acme.model</package-descriptor>
+----
+
+Generated package descriptors follow all ordinary `class` entries in the persistence unit, before later schema elements. Ordinary classes remain unchanged. An equivalent existing descriptor prevents a duplicate from being generated. Package matching and duplicate detection are scoped to each persistence unit. A skipped candidate in any unit leaves the entire document unchanged.
+
+==== Supported inputs
+
+A `persistence` root in the Jakarta Persistence namespace, with version 3.0, 3.1,
+3.2, or 4.0. Custom filenames and namespace prefixes are supported.
+Package references must be explicit and dot-separated; packages are not inferred
+from ordinary class names. Supported version 4.0 documents are also eligible.
+See <<xml-descriptors>> for shared eligibility and schema metadata rules.
+
+==== Manual review
+
+Slash-separated paths, missing package names, `.class` suffixes, and ambiguous content remain unchanged with `XML_PACKAGE_DESCRIPTOR_UNSUPPORTED` diagnostics.
+Unsupported versions and conflicting schema metadata follow the shared review
+rules in <<xml-descriptors>>.
+
+
+[[_MigrateOrmXml]]
+=== MigrateOrmXml
+
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigrateOrmXml`.
+
+Migrates Jakarta Persistence entity-mapping descriptors to version 4.0.
+
+==== Conversions
+
+Updates the root `version` and the matching canonical `xsi:schemaLocation`
+pair when present. Descriptor content is otherwise preserved.
+
+==== Supported inputs
+
+An `entity-mappings` root in the Jakarta Persistence mapping namespace, with
+version 3.0, 3.1, 3.2, or 4.0. Custom filenames and namespace prefixes are supported.
+See <<xml-descriptors>> for shared eligibility and schema metadata rules.
+
+==== Manual review
+
+Unsupported or missing versions, conflicting metadata, and noncanonical
+matching schema URLs remain unchanged and are reported in `SkippedMigrations`.
+Older Java EE namespaces are outside this migration.
+
+
+[[_MigrateEntityManagerGetDelegate]]
+=== MigrateEntityManagerGetDelegate
+
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate`.
+
+Migrates Hibernate-backed `EntityManager.getDelegate()` calls to `unwrap`.
+
+==== Conversions
+
+Replaces `getDelegate()` with `unwrap(java.lang.Object.class)`, preserving
+the receiver and its evaluation, including implicit, `this`, and `super` receivers.
+
+==== Supported inputs
+
+Java method invocations resolved to the no-argument method declared by
+`jakarta.persistence.EntityManager`. Calls through EntityManager subtypes are
+supported when they resolve to that declaration.
+
+==== Manual review
+
+Method references, application overrides, and declarations that shadow `java`
+are retained. `SkippedMigrations` reports `UNSUPPORTED_METHOD_REFERENCE`,
+`UNSUPPORTED_METHOD_OVERRIDE`, `NAME_RESOLUTION_CONFLICT`, or
+`MISSING_TYPE_ATTRIBUTION` for recognized unresolved candidates.
+
+
+[[_MigrateMapKeyNameToValue]]
+=== MigrateMapKeyNameToValue
+
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue`.
+
+Migrates the deprecated Jakarta Persistence `@MapKey` member.
+
+==== Conversions
+
+Replaces `@MapKey(name="the-name")` with `@MapKey("the-name")`.
+The original value expression and comments are preserved. Annotations already
+using `value`, and annotations with no explicit members, remain unchanged.
+
+==== Supported inputs
+
+Java `jakarta.persistence.MapKey` annotations with a single explicit `name`
+member, including constant and expression values.
+
+==== Manual review
+
+Annotations specifying both `name` and `value`, or unsupported member shapes,
+remain unchanged. `SkippedMigrations` reports `MAP_KEY_CONFLICT`,
+`UNSUPPORTED_ANNOTATION_SHAPE`, or `MISSING_TYPE_ATTRIBUTION` for recognized
+unresolved candidates.
+
+
+== Hibernate ORM 8.0 recipes
+
+[[_MigrateOrmCoordinates]]
+=== MigrateOrmCoordinates
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates`.
+
+Migrates artifact coordinates and versions using supported Gradle, Maven, Ivy, and Maven Ant Tasks declarations.
+
+==== Selecting the recipe
+
+Its independently selectable leaves are
+
+* `MigrateGradleOrmCoordinates`
+* `MigrateMavenOrmCoordinates`
+* `MigrateAntOrmCoordinates`
+
+Each requires an exact published ORM 8.0 `targetVersion`.
+
+For example, save this configured recipe as `rewrite.yml` in your application's
+project directory:
+
+[source,yaml]
+----
+type: specs.openrewrite.org/v1beta/recipe
+name: example.MigrateOrmBuild
+displayName: Migrate ORM build coordinates
+recipeList:
+  - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
+      targetVersion: 8.0.0.Beta2
+----
+
+With the OpenRewrite plugin and recipe JAR configured as shown under
+Running the migration, activate the configured recipe in `build.gradle`:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe('example.MigrateOrmBuild')
+    exportDatatables = true
+}
+----
+
+Preview with `./gradlew rewriteDryRun`, then apply with `./gradlew rewriteRun`.
+Selecting the coordinate recipe directly by class name does not supply its required
+`targetVersion`; use the configured recipe above or the `orm80` aggregate.
+
+The `orm80` aggregate supplies the version from this recipe project's configured
+migration target environment. Changing its `ormVersion` regenerates the packaged
+aggregate on the next build/publication. A published recipe JAR keeps that exact
+target; the consuming application's old dependency version does not select it.
+
+==== Conversions
+
+The migration uses an explicit artifact allowlist -
+
+* it updates coordinates using the historical `org.hibernate` group-id to the newer `org.hibernate.orm` group-id
+* renames `hibernate-jpamodelgen` to `hibernate-processor`
+* renames legacy Maven enhancement-plugin aliases to `org.hibernate.orm:hibernate-maven-plugin`
+
+Existing canonical declarations are also aligned.
+Validator, Search, Reactive, Tools, Models, Accessor, and other unrelated projects keep their declarations.
+
+`hibernate-entitymanager` is replaced by `org.hibernate.orm:hibernate-core`, or removed when an equivalent core declaration exists in the same dependency scope and configuration.
+Catalog aliases are retargeted to core while preserving aliases and bundle references.
+Other removed artifacts require an individually defined migration rule.
+
+Gradle adds an ordinary `hibernate-platform` dependency in each supported library
+configuration. Maven imports the platform in the applicable project/profile
+`dependencyManagement`. Library versions are omitted only with verified selected
+BOM membership and effective management. Processors, plugins, classified/custom
+artifacts, and constraints keep explicit target versions. Existing Gradle
+`enforcedPlatform` declarations are preserved; the recipe does not introduce
+forced resolution.
+
+Library and plugin aliases and bundle membership are preserved.
+ORM-only shared catalog versions are updated; references shared with unrelated
+libraries are replaced locally without changing the unrelated version. Catalog
+versions remain explicit unless all consumers and their platform coverage can be
+established from the supplied local build.
+
+Ivy revisions and `revConstraint` are aligned. Both Ant forms keep explicit versions;
+adding a platform dependency would not provide Maven/Gradle BOM semantics.
+
+==== Supported inputs
+
+Gradle support covers Groovy/Kotlin project scripts, conventional dependency
+configurations, literal plugin versions, direct string/named coordinates, and
+local TOML catalogs.
+
+Maven support includes project/profile dependencies, dependency management,
+plugins/plugin management, plugin dependencies, and compiler processor paths.
+Ivy support covers direct module dependencies with explicit revisions. Ant support
+covers recognized Maven Ant Tasks namespaces and local task aliases. Referenced
+POM files migrate when included among the inputs.
+
+==== Manual review
+
+Conflicting dependency attributes require manual review.
+External/programmatic catalogs,
+convention plugins, imported build scripts, settings plugin management, and
+arbitrary cross-project configuration require review.
+Local JAR paths, download tasks,
+custom artifact retrieval, imported/conditional task definitions, and arbitrary
+resolver implementations require manual work.
+
+Other BOMs, inherited management, and external constraints can
+require retaining explicit versions. The platform also manages companion libraries,
+so review the resolved dependency graph after migration.
+
+`SkippedMigrations` reports skipped declarations and incomplete portions of otherwise
+successful conversions, using `ORM_COORDINATE_IDENTITY_UNRESOLVED`,
+`ORM_COORDINATE_ARTIFACT_UNSUPPORTED`, `ORM_COORDINATE_CONFLICT`,
+`ORM_COORDINATE_VERSION_UNRESOLVED`, `ORM_COORDINATE_SYNTAX_UNSUPPORTED`, and
+`ORM_PLATFORM_MANAGEMENT_UNVERIFIED`. The last reason means the coordinates were
+aligned but an explicit version was retained because management was not proven.
+Reports refer to the leaf's original input and do not add diagnostic comments.
+
+Run build validation in a new invocation after applying the migration. A recipe can
+edit the build script running Rewrite, but Gradle/Maven have already evaluated that
+script for the current invocation. Coordinate conversion does not replace the
+current source parser classpath.
+
+
+[[_MigrateMappingXml]]
+=== MigrateMappingXml
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateMappingXml`.
+
+Migrates Hibernate's `mapping.xml` files:
 
 * updates version to 8.0
 * migrates legacy table and column comment attributes to elements
 * removes ignored many-to-many orphan-removal
 
-=== `MigrateQueryFlushMode`
+See <<xml-descriptors>> for shared eligibility and schema metadata rules.
 
-Replaces Java references to `org.hibernate.query.QueryFlushMode`
-with `jakarta.persistence.QueryFlushMode`, including static imports, declarations,
-and named-query annotation values.
+==== Conversions
 
-=== `MigrateQueryHints`
+Canonical HTTP schema URLs are upgraded to HTTPS, including in version 8.0
+documents. The namespace remains `http://www.hibernate.org/xsd/orm/mapping`.
+
+===== Comment attributes
+
+`org.hibernate.migration.recipes.orm80.MigrateMappingXml` moves unqualified comment attributes to child elements:
+
+[source,xml]
+----
+<table name="books" comment="Books &amp; editions"/>
+----
+
+becomes:
+
+[source,xml]
+----
+<table name="books"><comment>Books &amp; editions</comment></table>
+----
+
+Comment elements are placed in the order required by schema 8.0. Text values are preserved after XML attribute normalization, with XML escaping applied once. Empty values are supported. XML comments and unrelated child elements are retained. If one existing comment
+child has the same semantic value, only the redundant attribute is removed.
+
+===== Ignored many-to-many orphan removal
+
+`org.hibernate.migration.recipes.orm80.MigrateMappingXml` removes the unqualified `orphan-removal` attribute from schema-defined `<many-to-many>` elements. Hibernate never processed this attribute, so removing it preserves existing behavior. Both `true` and `false` values are removed, including in documents already marked as version 8.0.
+
+The attribute remains on `<one-to-many>` and `<one-to-one>`, where it is supported. Foreign-namespace attributes, unrelated XML contexts, and JPA entity-mapping documents are unaffected. Removal is part of the same document migration as version and comment changes; a conflict elsewhere leaves the entire document unchanged.
+
+==== Supported inputs
+
+An `entity-mappings` root in the Hibernate mapping namespace, with version 7.0
+or 8.0. Custom filenames and namespace prefixes are supported.
+
+Comment conversion applies to schema-defined uses of `table`, `secondary-table`, `collection-table`, `join-table`, `table-generator`, `column`, and `join-column` types, including aliases such as `inverse-join-column`. Matching includes the enclosing schema context and namespaces.
+
+==== Manual review
+
+JPA mapping comments and arbitrary elements with the same local names are not
+converted.
+
+Different values, multiple existing comment children, duplicate comment attributes, and unresolved entity values remain unchanged with `XML_COMMENT_CONFLICT` diagnostics. Any such conflict leaves the entire document unchanged, including its version and schema reference. The recipe also handles version 8.0 documents containing legacy comment attributes.
+
+
+[[_MigrateQueryFlushMode]]
+=== MigrateQueryFlushMode
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode`.
+
+Migrates Hibernate query flush-mode references to Jakarta Persistence.
+
+==== Conversions
+
+Replaces `org.hibernate.query.QueryFlushMode` with
+`jakarta.persistence.QueryFlushMode`. Enum constants and query method calls are
+preserved. Naming conflicts use fully qualified references.
+
+==== Supported inputs
+
+Java references to the source enum, including imports, explicit and wildcard
+static imports, declarations, and named-query annotation values.
+
+==== Manual review
+
+Supply the source Hibernate API for type attribution. Review unresolved
+references and references outside Java source, such as reflective class-name strings,
+which are outside this type migration.
+
+
+[[_MigrateQueryHints]]
+=== MigrateQueryHints
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateQueryHints`.
 
 Replaces Java constants from `org.hibernate.jpa.QueryHints` with explicit,
 field-by-field mappings to `HibernateHints`, `SpecHints`, and `LegacySpecHints`
-in the same package. It is independently selectable and included in `orm80`.
-Qualified references, explicit and wildcard static imports, and annotation
-values are supported; naming conflicts use fully qualified references.
+in the same package.
+
+==== Conversions
 
 The exact hint keys and supplied values are preserved. In particular,
 `HINT_READONLY` becomes `HibernateHints.HINT_READ_ONLY`, `HINT_NATIVE_LOCKMODE`
@@ -89,6 +426,13 @@ graph aliases become the corresponding `SpecHints.HINT_SPEC_FETCH_GRAPH` or
 changed to the distinct follow-on strategy key. Hibernate timeout values remain
 in seconds and specification timeout values remain in milliseconds.
 
+==== Supported inputs
+
+Qualified references, explicit and wildcard static imports, and annotation
+values are supported; naming conflicts use fully qualified references.
+
+==== Manual review
+
 Nonconstant uses, including declarations, class literals, methods such as
 `getDefinedHints()`, and instance-qualified field accesses, require manual
 migration. Safe constants in the same file still migrate. `SkippedMigrations`
@@ -97,16 +441,30 @@ as `MISSING_TYPE_ATTRIBUTION`, and attributed fields without a mapping as
 `UNMAPPED_QUERY_HINT_CONSTANT`, at original leaf-input coordinates. Retained
 uses may prevent compilation against ORM 8 until manually migrated.
 
-=== `MigrateOptimisticLockExclusion`
+
+[[_MigrateOptimisticLockExclusion]]
+=== MigrateOptimisticLockExclusion
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateOptimisticLockExclusion`.
+
+Migrates Hibernate optimistic-lock exclusions to Jakarta Persistence.
+
+==== Conversions
 
 Replaces `org.hibernate.annotations.OptimisticLock(excluded = true)` on Java fields
 and getters with `jakarta.persistence.ExcludedFromVersioning`. Existing matching
 exclusions are retained and the redundant legacy annotation is removed. Import
 collisions use a fully qualified replacement; comments are preserved.
 
+==== Supported inputs
+
 Explicit `excluded = false` is removed only for directly mapped `@Basic`,
 `@ElementCollection`, and owning `@OneToMany`/`@ManyToMany` attributes whose
-`mappedBy` is omitted or the literal empty string. Inverse collections, to-one
+`mappedBy` is omitted or the literal empty string.
+
+==== Manual review
+
+For explicit `excluded = false`, inverse collections, to-one
 associations, implicit or embedded mappings, mixed field/getter declarations,
 access configuration, mapping overrides, and custom Hibernate mappings require
 review. External XML overrides are not evaluated; review against effective mappings
@@ -119,29 +477,48 @@ annotations are also retained. `SkippedMigrations` reports these cases using
 `OPTIMISTIC_LOCK_VALUE_UNSUPPORTED`, `UNSUPPORTED_ANNOTATION_SHAPE`, or
 `MISSING_TYPE_ATTRIBUTION` at original leaf-input coordinates.
 
-The recipe is independently selectable and included in `orm80`. Conversion checks
-cover source/target compilation and fresh-target idempotence; runtime checks verify
-version behavior for excluded basic attributes, included basic attributes, and an
-owning collection. XML optimistic-lock migration is deferred pending
+XML optimistic-lock migration is deferred pending
 https://github.com/hibernate/hibernate-migration-recipes/issues/39[issue #39] and
 https://github.com/jakartaee/persistence/issues/1190[JPA issue #1190].
 
-=== `MigrateFindMultipleOptions`
 
-Relocates Java references to `org.hibernate.OrderingMode`,
-`org.hibernate.SessionCheckMode`, `org.hibernate.RemovalsMode`, and `org.hibernate.BatchSize`
-to the corresponding nested types in `org.hibernate.FindMultipleOption`. It handles
-imports (including static and wildcard imports), declarations, enum constants,
-class literals, and batch-size constructors and constructor references. Conflicting
-simple names use fully qualified references. Enum constants, explicit option values,
-and loading calls are preserved.
+[[_MigrateFindMultipleOptions]]
+=== MigrateFindMultipleOptions
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions`.
+
+Migrates Hibernate multi-ID loading option types to `FindMultipleOption`.
+
+==== Conversions
+
+Relocates `org.hibernate.OrderingMode`, `org.hibernate.SessionCheckMode`,
+`org.hibernate.RemovalsMode`, and `org.hibernate.BatchSize` to the corresponding
+nested types in `org.hibernate.FindMultipleOption`. Enum constants, explicit
+option values, and loading calls are preserved. Conflicting simple names use
+fully qualified references; existing nested-type references are retained.
+
+==== Supported inputs
+
+Attributed Java references, including imports, static and wildcard imports,
+declarations, enum constants, class literals, and batch-size constructors and
+constructor references.
+
+==== Manual review
+
+Supply the source Hibernate API for type attribution. Unresolved qualified
+references are retained. References outside Java source, such as reflective
+class-name strings, require separate review.
 
 
-=== `MigrateSqlResultVerification`
+[[_MigrateSqlResultVerification]]
+=== MigrateSqlResultVerification
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateSqlResultVerification`.
 
 Replaces explicit `check` members on Hibernate's `@SQLInsert`, `@SQLUpdate`,
 `@SQLDelete`, and `@SQLDeleteAll`, including annotations in repeatable containers.
-It is included in `orm80` and can also be selected independently.
+
+==== Conversions
 
 [cols="1,2",options="header"]
 |===
@@ -157,8 +534,14 @@ custom expectations and the explicit `Expectation.class` default sentinel.
 Annotations with no explicit `check` remain unchanged. SQL, callable settings,
 other members, and comments are retained. Name conflicts use qualified references.
 
+==== Supported inputs
+
 Resolved qualified, ordinary, wildcard, and static-import enum references are
-supported. Imports still needed by other source uses are retained. ORM 8 also
+supported. Imports still needed by other source uses are retained.
+
+==== Manual review
+
+ORM 8 also
 removes `ResultCheckStyle`; uses outside these annotation members require manual
 migration.
 
@@ -166,42 +549,57 @@ Recognized unsupported candidates remain unchanged and use `SkippedMigrations`
 with `MISSING_TYPE_ATTRIBUTION`, `SQL_CHECK_VALUE_UNRESOLVED`, or
 `UNSUPPORTED_ANNOTATION_SHAPE`. Supply the source Hibernate API for type attribution.
 
-=== `MigrateClientEnhancementOption`
+
+[[_MigrateClientEnhancementOption]]
+=== MigrateClientEnhancementOption
+
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption`.
 
 Renames `enableExtendedEnhancement` to `enableClientEnhancement` in supported Gradle, Maven, and Ant configuration.
-It is included in `orm80` and can also be selected independently.
+
+==== Selecting the recipe
+
 Its independently selectable leaves are
 
 * `MigrateGradleClientEnhancementOption`
 * `MigrateMavenClientEnhancementOption`
 * `MigrateAntClientEnhancementOption`
 
-which are all part of the `org.hibernate.migration.recipes.orm80` aggregate recipe.
+==== Conversions
 
 If only the old option exists, its value or expression is preserved. If both options
 exist in one supported configuration, the new option wins, including explicit
 `false`, and the obsolete setting is removed. Comments are retained.
 
+==== Supported inputs
+
 * Gradle: Groovy `build.gradle` and Kotlin `build.gradle.kts` scripts with canonical
 `hibernate { enhancement { ... } }` blocks. The script must explicitly apply
 `org.hibernate.orm`, or the parser must attribute the Hibernate receiver. Direct
 assignments and `.set(...)` statements, including `this` qualification, are
-supported. Duplicate writes, multiple enhancement blocks, conditional/nested
+supported.
+* Maven: Direct option elements in plugin and execution configurations, including
+`pluginManagement` and profiles, for `org.hibernate.orm:hibernate-maven-plugin`,
+`org.hibernate.orm:hibernate-enhance-maven-plugin`, and
+`org.hibernate:hibernate-enhance-maven-plugin`. Same-block conflict cleanup is
+supported even with a parent.
+* Ant: Unnamespaced project documents with an explicit same-document `taskdef`
+whose classname is `org.hibernate.tool.enhance.EnhancementTask`. Arbitrary literal
+task aliases and property-valued attributes are supported.
+
+==== Manual review
+
+* Gradle: Duplicate writes, multiple enhancement blocks, conditional/nested
 writes, legacy reads, and unsupported setters require review. When both names
 occur, the old value must be a boolean literal: removing an arbitrary expression
 could discard side effects. Cross-project configuration, convention plugins,
 imported scripts, and arbitrary receiver aliases are outside initial support.
-* Maven: Direct option elements in plugin and execution configurations, including
-`pluginManagement` and profiles, for `org.hibernate.orm:hibernate-maven-plugin`,
-`org.hibernate.orm:hibernate-enhance-maven-plugin`, and
-`org.hibernate:hibernate-enhance-maven-plugin`. Old-only settings are skipped when
+* Maven: Old-only settings are skipped when
 a parent or another scope for the same plugin could supply the new option.
-Same-block conflict cleanup is supported even with a parent. Duplicate elements,
+Duplicate elements,
 configuration merge directives, nested element values, and unresolved plugin
 identity require review. Parent POMs and profile activation are not evaluated.
-* Ant: Unnamespaced project documents with an explicit same-document `taskdef`
-whose classname is `org.hibernate.tool.enhance.EnhancementTask`. Arbitrary literal
-task aliases and property-valued attributes are supported. Conditional, dynamic,
+* Ant: Conditional, dynamic,
 competing, imported, resource-based, namespaced, or macro-based task configuration
 requires manual review.
 
@@ -213,91 +611,65 @@ are performed by this recipe.
 
 The build script running Rewrite itself is eligible. Run build validation in a
 separate invocation after applying changes so the updated configuration is evaluated.
-The enhancement migration is tested through structured parsing, exact output
-assertions, recipe discovery, diagnostics, and fresh-parser idempotence across the
-supported build formats. Target Hibernate tooling execution is not covered by those
-checks; the chosen tooling release must expose `enableClientEnhancement`.
+The chosen Hibernate tooling release must expose `enableClientEnhancement`.
 
-=== `MigrateOrmCoordinates`
+[[xml-descriptors]]
+== Shared XML descriptor behavior
 
-Migrates artifact coordinates and versions using supported Gradle, Maven, Ivy, and Maven Ant Tasks declarations.
-Its independently selectable leaves are
+The recipes identify XML by root element and namespace, not filename.
+Unrelated XML is ignored.
 
-* `MigrateGradleOrmCoordinates`
-* `MigrateMavenOrmCoordinates`
-* `MigrateAntOrmCoordinates`
+=== Supported inputs
 
-Each requires an exact published ORM 8.0 `targetVersion`.
+[cols="1,2,1,2,1",options="header"]
+|===
+|Descriptor |Root namespace |Root element |Version update |Recipe
 
-For example:
+|JPA persistence
+|`https://jakarta.ee/xml/ns/persistence`
+| <persistence/>
+|3.0, 3.1, 3.2 -> 4.0
+|<<_MigratePersistenceXml>>
 
-[source,yaml]
+|JPA entity mappings
+|`https://jakarta.ee/xml/ns/persistence/orm`
+| <entity-mappings/>
+|3.0, 3.1, 3.2 -> 4.0
+|<<_MigrateOrmXml>>
+
+|Hibernate entity mappings
+|`http://www.hibernate.org/xsd/orm/mapping`
+| <entity-mappings/>
+|7.0 -> 8.0
+|<<_MigrateMappingXml>>
+|===
+
+Each recipe updates its document’s content together with the root `version` and the matching canonical `xsi:schemaLocation` pair when present. Missing schema locations are not added. Unrelated schema pairs and formatting are preserved. Hibernate schema locations may use HTTP or HTTPS; canonical HTTP schema URLs are upgraded to HTTPS, including in documents already marked as version 8.0.
+
+=== Manual review
+
+Unsupported or missing versions, conflicting schema metadata, and noncanonical matching schema URLs are left unchanged and reported through `SkippedMigrations`. Older Java EE namespaces, Hibernate mapping schema 3.1.0, and legacy hbm.xml are outside this migration. These recipes cover the changes described in their recipe sections; they are not general validators or converters for every schema difference.
+
+=== Document-wide conflicts and repeated runs
+
+Each schema family has one selectable recipe that transforms supported content
+and updates version/schema metadata together. Package descriptor and Hibernate
+comment conversions are part of their respective descriptor recipes.
+A content conflict cancels all changes to that document and is reported in
+`SkippedMigrations`; other documents remain eligible. This also applies to documents
+already carrying the target version. Re-running a successful migration makes no
+further changes.
+
+=== Selecting only XML conversions
+
+To run only XML conversions, select those recipes directly:
+
+[source,groovy]
 ----
-type: specs.openrewrite.org/v1beta/recipe
-name: example.MigrateOrmBuild
-displayName: Migrate ORM build coordinates
-recipeList:
-  - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
-      targetVersion: 8.0.0.Beta2
+rewrite {
+    activeRecipe("org.hibernate.migration.recipes.jpa4.MigratePersistenceXml")
+    activeRecipe("org.hibernate.migration.recipes.jpa4.MigrateOrmXml")
+    activeRecipe("org.hibernate.migration.recipes.orm80.MigrateMappingXml")
+    exportDatatables = true
+}
 ----
-
-The `orm80` aggregate supplies the version from this recipe project's configured
-migration target environment. Changing its `ormVersion` regenerates the packaged
-aggregate on the next build/publication. A published recipe JAR keeps that exact
-target; the consuming application's old dependency version does not select it.
-
-The migration uses an explicit artifact allowlist -
-
-* it updates coordinates using the historical `org.hibernate` group-id to the newer `org.hibernate.orm` group-id
-* renames `hibernate-jpamodelgen` to `hibernate-processor`
-* renames legacy Maven enhancement-plugin aliases to `org.hibernate.orm:hibernate-maven-plugin`
-
-Existing canonical declarations are also aligned.
-Validator, Search, Reactive, Tools, Models, Accessor, and other unrelated projects keep their declarations. Conflicting dependency attributes require manual review.
-
-`hibernate-entitymanager` is replaced by `org.hibernate.orm:hibernate-core`, or removed when an equivalent core declaration exists in the same dependency scope and configuration.
-Catalog aliases are retargeted to core while preserving aliases and bundle references.
-Other removed artifacts require an individually defined migration rule.
-
-Gradle support covers Groovy/Kotlin project scripts, conventional dependency
-configurations, literal plugin versions, direct string/named coordinates, and
-local TOML catalogs. Library and plugin aliases and bundle membership are preserved.
-ORM-only shared catalog versions are updated; references shared with unrelated
-libraries are replaced locally without changing the unrelated version. Catalog
-versions remain explicit unless all consumers and their platform coverage can be
-established from the supplied local build. External/programmatic catalogs,
-convention plugins, imported build scripts, settings plugin management, and
-arbitrary cross-project configuration require review.
-
-Gradle adds an ordinary `hibernate-platform` dependency in each supported library
-configuration. Maven imports the platform in the applicable project/profile
-`dependencyManagement`. Library versions are omitted only with verified selected
-BOM membership and effective management. Processors, plugins, classified/custom
-artifacts, and constraints keep explicit target versions. Existing Gradle
-`enforcedPlatform` declarations are preserved; the recipe does not introduce
-forced resolution. Other BOMs, inherited management, and external constraints can
-require retaining explicit versions. The platform also manages companion libraries,
-so review the resolved dependency graph after migration.
-
-Maven support includes project/profile dependencies, dependency management,
-plugins/plugin management, plugin dependencies, and compiler processor paths.
-Ivy support covers direct module dependencies with explicit revisions, including
-alignment of `revConstraint`. Ant support covers recognized Maven Ant Tasks
-namespaces and local task aliases. Both Ant forms keep explicit versions; adding
-a platform dependency would not provide Maven/Gradle BOM semantics. Referenced
-POM files migrate when included among the inputs. Local JAR paths, download tasks,
-custom artifact retrieval, imported/conditional task definitions, and arbitrary
-resolver implementations require manual work.
-
-`SkippedMigrations` reports skipped declarations and incomplete portions of otherwise
-successful conversions, using `ORM_COORDINATE_IDENTITY_UNRESOLVED`,
-`ORM_COORDINATE_ARTIFACT_UNSUPPORTED`, `ORM_COORDINATE_CONFLICT`,
-`ORM_COORDINATE_VERSION_UNRESOLVED`, `ORM_COORDINATE_SYNTAX_UNSUPPORTED`, and
-`ORM_PLATFORM_MANAGEMENT_UNVERIFIED`. The last reason means the coordinates were
-aligned but an explicit version was retained because management was not proven.
-Reports refer to the leaf's original input and do not add diagnostic comments.
-
-Run build validation in a new invocation after applying the migration. A recipe can
-edit the build script running Rewrite, but Gradle/Maven have already evaluated that
-script for the current invocation. Coordinate conversion does not replace the
-current source parser classpath.

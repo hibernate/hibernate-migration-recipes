@@ -80,6 +80,8 @@ class XmlDocumentMigrationTest {
                 : "<entity class='demo.Book'><table comment='convert'/>"
                     + (conflict ? "<secondary-table name='other' comment='old'><comment>new</comment></secondary-table>" : "") + "</entity>";
         return "<" + family.root + " xmlns='" + family.namespace + "' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' version='" + version
-                + "' xsi:schemaLocation='" + family.namespace + " " + family.schema(version) + "'>" + body + "</" + family.root + ">";
+                + "' xsi:schemaLocation='" + family.namespace + " "
+                + (family == Descriptor.MAPPING ? family.schema(version).replace("https:", "http:") : family.schema(version))
+                + "'>" + body + "</" + family.root + ">";
     }
 }

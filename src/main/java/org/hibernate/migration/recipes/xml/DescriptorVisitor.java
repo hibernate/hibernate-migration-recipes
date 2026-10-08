@@ -80,7 +80,6 @@ public class DescriptorVisitor extends XmlIsoVisitor<ExecutionContext> {
                 String target = descriptor.schema(descriptor.target);
                 if (descriptor == Descriptor.MAPPING && words.get(i + 1).startsWith("http:")) {
                     expected = expected.replace("https:", "http:");
-                    target = target.replace("https:", "http:");
                 }
                 if (!expected.equals(words.get(i + 1))) return reject(doc, ctx, "XML_SCHEMA_LOCATION_UNSUPPORTED", "The schema location does not match the declared version's canonical schema.");
                 replacement = value.substring(0, starts.get(i + 1)) + target + value.substring(ends.get(i + 1));
@@ -89,7 +88,7 @@ public class DescriptorVisitor extends XmlIsoVisitor<ExecutionContext> {
         Xml.Document migrated = super.visitDocument(doc, ctx);
         // Keep metadata and content together: a skipped candidate cancels this document's edits.
         if (contentSkipped) return doc;
-        if (descriptor.target.equals(v)) return migrated;
+        if (descriptor.target.equals(v) && (replacement == null || replacement.equals(schema.getValueAsString()))) return migrated;
         List<Xml.Attribute> attributes = new ArrayList<>();
         for (Xml.Attribute a : root.getAttributes()) {
             if (a == version) attributes.add(a.withValue(a.getValue().withValue(descriptor.target)));

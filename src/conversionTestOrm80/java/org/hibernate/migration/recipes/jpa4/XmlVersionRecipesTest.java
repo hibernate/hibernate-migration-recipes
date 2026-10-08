@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class XmlVersionRecipesTest {
     @Test void schemaUpdatesPreserveFormattingAndCompose() throws Exception {
         for (Descriptor d : List.of(Descriptor.ORM, Descriptor.MAPPING)) {
-            for (String version : d.versions.stream().filter(v -> !v.equals(d.target)).toList()) {
+            for (String version : d.versions) {
                 List<Recipe> recipes = new ArrayList<>(List.of(leaf(d), composite("orm80")));
                 for (Recipe recipe : recipes) {
                     for (String scheme : d == Descriptor.MAPPING ? List.of("https:", "http:") : List.of("https:")) {
@@ -21,7 +21,7 @@ class XmlVersionRecipesTest {
                         String input = "<?xml version=\"1.0\"?>\r\n<!-- keep -->\r\n<p:entity-mappings xmlns:p=\"" + d.namespace + "\" xmlns:s=\"http://www.w3.org/2001/XMLSchema-instance\" version='" + version + "' s:schemaLocation=\"urn:other other.xsd\n  " + d.namespace + "\t" + schema + "  \"/>";
                         validate(input, resource(d, version));
                         var result = run(recipe, input);
-                        assertEquals(input.replace("version='" + version + "'", "version='" + d.target + "'").replace(schema, d.schema(d.target).replace("https:", scheme)), result.text());
+                        assertEquals(input.replace("version='" + version + "'", "version='" + d.target + "'").replace(schema, d.schema(d.target)), result.text());
                         assertTrue(result.rows().isEmpty());
                         validate(result.text(), resource(d, d.target));
                     }
