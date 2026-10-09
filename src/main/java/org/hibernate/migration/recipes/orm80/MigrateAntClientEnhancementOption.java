@@ -9,7 +9,7 @@ import org.openrewrite.xml.tree.Xml;
 
 import java.util.*;
 
-import static org.hibernate.migration.recipes.orm80.EnhancementMigrationSupport.*;
+import static org.hibernate.migration.recipes.support.EnhancementMigrationSupport.*;
 
 /// Migrates Ant enhancement attributes identified by same-document task definitions.
 ///

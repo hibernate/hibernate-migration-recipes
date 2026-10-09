@@ -1,0 +1,64 @@
+= Adopt Hibernate Platform
+
+== Selecting the recipe
+
+Select `org.hibernate.migration.recipes.platform.AdoptHibernatePlatform` to import the `hibernate-platform` BOM and omit explicit versions for managed library artifacts. It is designed to run after `MigrateOrmCoordinates` (or on builds that already use `org.hibernate.orm` coordinates).
+
+[NOTE]
+The link:orm80.adoc[ORM 8.0 Migration] does not run this recipe. It must be run separately.
+
+
+== Enabling with Gradle
+
+With the OpenRewrite Gradle plugin applied and this project's recipe JAR added to the `rewrite` dependency configuration, add this to your application's `build.gradle` to use the default settings:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe("org.hibernate.migration.recipes.platform.AdoptHibernatePlatform")
+    exportDatatables = true
+}
+----
+
+To run it alongside the ORM 8.0 migration, activate both:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe("org.hibernate.migration.recipes.orm80")
+    activeRecipe("org.hibernate.migration.recipes.platform.AdoptHibernatePlatform")
+    exportDatatables = true
+}
+----
+
+Preview the changes with `./gradlew rewriteDryRun`, then apply them with `./gradlew rewriteRun`.
+See the https://docs.openrewrite.org/reference/gradle-plugin-configuration[OpenRewrite Gradle plugin documentation] for plugin and dependency setup.
+
+== Configuration
+
+The recipe targets the ORM 8.0 release this JAR was built against by default. To target a different version, save a custom recipe in `rewrite.yml` in your application's project directory:
+
+[source,yaml]
+----
+type: specs.openrewrite.org/v1beta/recipe
+name: com.example.AdoptHibernatePlatform
+displayName: Adopt Hibernate platform
+description: Import the Hibernate platform BOM targeting a specific ORM release.
+recipeList:
+  - org.hibernate.migration.recipes.platform.AdoptHibernatePlatform:
+      targetVersion: 8.0.0.Final
+----
+
+Select that configured recipe in `build.gradle` instead of the default recipe:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe("com.example.AdoptHibernatePlatform")
+    exportDatatables = true
+}
+----
+
+Gradle adds an ordinary `hibernate-platform` dependency in each supported library configuration. Maven imports the platform in the applicable project/profile `dependencyManagement`. Explicit versions are omitted for library artifacts managed by the platform BOM. Processors, plugins, classified/custom artifacts, and constraints keep explicit target versions. Existing Gradle `enforcedPlatform` declarations are preserved; the recipe does not introduce forced resolution. Maven POMs with a `<parent>` element are skipped since inherited management cannot be verified from the POM alone. Review the resolved dependency graph after migration.
+
+See link:../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for diagnostic reports.

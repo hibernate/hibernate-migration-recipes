@@ -1,4 +1,4 @@
-package org.hibernate.migration.recipes.orm80;
+package org.hibernate.migration.recipes.support;
 
 import org.openrewrite.xml.tree.Content;
 import org.openrewrite.xml.tree.Xml;
@@ -7,9 +7,9 @@ import java.util.*;
 /// Small namespace-preserving XML edits with local indentation and comment retention.
 ///
 /// @author Steve Ebersole
-final class CoordinateXmlEdits {
+public final class CoordinateXmlEdits {
     private CoordinateXmlEdits() {}
-    static Xml.Tag set(Xml.Tag tag, String name, String value) {
+    public static Xml.Tag set(Xml.Tag tag, String name, String value) {
         var matching = OrmCoordinateSupport.children(tag, name);
         if (matching.size() == 1) {
             Xml.Tag old = matching.get(0);
@@ -17,7 +17,7 @@ final class CoordinateXmlEdits {
         }
         return append(tag, Xml.Tag.build("<" + OrmCoordinateSupport.name(tag, name) + ">" + value + "</" + OrmCoordinateSupport.name(tag, name) + ">"));
     }
-    static Xml.Tag remove(Xml.Tag tag, String name) {
+    public static Xml.Tag remove(Xml.Tag tag, String name) {
         Set<UUID> ids = new HashSet<>();
         OrmCoordinateSupport.children(tag, name).forEach(t -> ids.add(t.getId()));
         if (ids.isEmpty()) return tag;
@@ -31,7 +31,7 @@ final class CoordinateXmlEdits {
         }
         return tag.withContent(content);
     }
-    static Xml.Tag removeDeclarations(Xml.Tag parent, Set<UUID> ids) {
+    public static Xml.Tag removeDeclarations(Xml.Tag parent, Set<UUID> ids) {
         if (parent.getContent() == null) return parent;
         List<Content> content = new ArrayList<>();
         for (Content child : parent.getContent()) {
@@ -46,7 +46,7 @@ final class CoordinateXmlEdits {
             else if (child instanceof Xml.Tag nested) retainComments(nested, prefix, content);
         }
     }
-    static String dependencyBehavior(Xml.Tag tag, boolean ivy, boolean ant) {
+    public static String dependencyBehavior(Xml.Tag tag, boolean ivy, boolean ant) {
         Set<String> attributes = ant ? (ivy ? Set.of("org", "name", "rev", "revConstraint") : Set.of("groupId", "artifactId", "version")) : Set.of();
         List<String> behavior = new ArrayList<>();
         for (Xml.Attribute a : tag.getAttributes()) if (!attributes.contains(a.getKeyAsString())) {
@@ -73,7 +73,7 @@ final class CoordinateXmlEdits {
         List<String> attributes = tag.getAttributes().stream().map(a -> a.getKeyAsString() + "=" + a.getValueAsString()).sorted().toList();
         return tag.getName() + attributes + ":" + tag.getValue().orElse("").trim() + children;
     }
-    static Xml.Tag append(Xml.Tag parent, Xml.Tag child) {
+    public static Xml.Tag append(Xml.Tag parent, Xml.Tag child) {
         List<Content> content = new ArrayList<>(parent.getContent() == null ? List.of() : parent.getContent());
         String prefix = parent.getChildren().isEmpty() ? "" : parent.getChildren().get(0).getPrefix();
         if (prefix.isEmpty() && parent.getClosing() != null && parent.getClosing().getPrefix().contains("\n"))
@@ -94,7 +94,7 @@ final class CoordinateXmlEdits {
             result = result.withClosing(result.getClosing().withPrefix(newline + indentation));
         return result;
     }
-    static Xml.Tag attribute(Xml.Tag tag, String name, String value) {
+    public static Xml.Tag attribute(Xml.Tag tag, String name, String value) {
         return tag.withAttributes(tag.getAttributes().stream().map(a -> name.equals(a.getKeyAsString())
                 ? a.withValue(a.getValue().withValue(value)) : a).toList());
     }

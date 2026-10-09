@@ -14,6 +14,7 @@ Select a recipe by its identifier, not its YAML filename. A composite recipe gro
 == Available migrations
 
 * link:migrations/orm80.adoc[Hibernate ORM 7.4 to 8.0]
+* link:migrations/adopt-hibernate-platform.adoc[Adopt Hibernate Platform]
 * link:migrations/temporal-annotation.adoc[Modernize @Temporal mappings]
 
 [[_reviewing_skipped_migrations]]
