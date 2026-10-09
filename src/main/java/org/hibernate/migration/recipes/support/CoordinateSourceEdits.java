@@ -1,4 +1,4 @@
-package org.hibernate.migration.recipes.orm80;
+package org.hibernate.migration.recipes.support;
 
 import org.openrewrite.*;
 import org.openrewrite.groovy.GroovyParser;
@@ -14,10 +14,10 @@ import java.util.function.UnaryOperator;
 /// Applies nonoverlapping edits to structurally identified script/catalog nodes and reparses the result.
 ///
 /// @author Steve Ebersole
-final class CoordinateSourceEdits {
-    record Edit(int start, int end, String replacement) {}
+public final class CoordinateSourceEdits {
+    public record Edit(int start, int end, String replacement) {}
     private CoordinateSourceEdits() {}
-    static Map<UUID, Integer> offsets(SourceFile source, Set<UUID> ids) {
+    public static Map<UUID, Integer> offsets(SourceFile source, Set<UUID> ids) {
         if (!(source instanceof Toml.Document)) return EnhancementMigrationSupport.offsets(source, ids);
         SourceFile marked = (SourceFile) new TomlIsoVisitor<Integer>() {
             @Override public Toml preVisit(Toml tree, Integer p) {
@@ -34,14 +34,14 @@ final class CoordinateSourceEdits {
         });
         holder.add(out); Objects.requireNonNull(marked).printAll(out); return positions;
     }
-    static String printed(SourceFile source, Tree tree) {
+    public static String printed(SourceFile source, Tree tree) {
         if (tree instanceof org.openrewrite.java.tree.J j) tree = j.withPrefix(org.openrewrite.java.tree.Space.EMPTY);
         if (tree instanceof Toml t) tree = t.withPrefix(org.openrewrite.toml.tree.Space.EMPTY);
         PrintOutputCapture<Integer> out = new PrintOutputCapture<>(0);
         source.<Integer>printer(new Cursor(null, source)).visit(tree, out);
         return out.getOut();
     }
-    static SourceFile apply(SourceFile source, List<Edit> edits, ExecutionContext ctx) {
+    public static SourceFile apply(SourceFile source, List<Edit> edits, ExecutionContext ctx) {
         if (edits.isEmpty()) return source;
         String original = source.printAll();
         StringBuilder text = new StringBuilder(original);

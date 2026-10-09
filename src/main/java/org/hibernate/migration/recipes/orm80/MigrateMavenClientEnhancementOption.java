@@ -10,7 +10,7 @@ import org.openrewrite.xml.tree.Xml;
 
 import java.util.*;
 
-import static org.hibernate.migration.recipes.orm80.EnhancementMigrationSupport.*;
+import static org.hibernate.migration.recipes.support.EnhancementMigrationSupport.*;
 
 /// Migrates explicit Hibernate Maven enhancement configuration with bounded inheritance handling.
 ///

@@ -1,4 +1,4 @@
-package org.hibernate.migration.recipes.orm80;
+package org.hibernate.migration.recipes.support;
 
 import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.jspecify.annotations.NonNull;
@@ -16,19 +16,19 @@ import java.util.function.UnaryOperator;
 /// Original-source diagnostics and option names shared by enhancement migrations.
 ///
 /// @author Steve Ebersole
-final class EnhancementMigrationSupport {
-    static final String OLD = "enableExtendedEnhancement";
-    static final String NEW = "enableClientEnhancement";
-    static final String IDENTITY = "ENHANCEMENT_IDENTITY_UNRESOLVED";
-    static final String AMBIGUOUS = "ENHANCEMENT_CONFIGURATION_AMBIGUOUS";
-    static final String INHERITANCE = "ENHANCEMENT_INHERITANCE_UNRESOLVED";
-    static final String SYNTAX = "ENHANCEMENT_SYNTAX_UNSUPPORTED";
+public final class EnhancementMigrationSupport {
+    public static final String OLD = "enableExtendedEnhancement";
+    public static final String NEW = "enableClientEnhancement";
+    public static final String IDENTITY = "ENHANCEMENT_IDENTITY_UNRESOLVED";
+    public static final String AMBIGUOUS = "ENHANCEMENT_CONFIGURATION_AMBIGUOUS";
+    public static final String INHERITANCE = "ENHANCEMENT_INHERITANCE_UNRESOLVED";
+    public static final String SYNTAX = "ENHANCEMENT_SYNTAX_UNSUPPORTED";
 
     private EnhancementMigrationSupport() {}
 
     /// Records candidate offsets through the source's own printer; temporary markers
     /// belong only to this snapshot and never reach migration output.
-    static Map<UUID, Integer> offsets(SourceFile source, Set<UUID> candidates) {
+    public static Map<UUID, Integer> offsets(SourceFile source, Set<UUID> candidates) {
         SourceFile marked;
         if (source instanceof Xml.Document) {
             marked = (SourceFile) new XmlIsoVisitor<Integer>() {
@@ -74,7 +74,7 @@ final class EnhancementMigrationSupport {
     }
 
     /// Reports each candidate once per execution, retaining original input coordinates.
-    static void report(Recipe recipe, SkippedMigrations table, SourceFile source,
+    public static void report(Recipe recipe, SkippedMigrations table, SourceFile source,
             Map<UUID, Integer> offsets, UUID candidate, String reason, String message, ExecutionContext ctx) {
         String key = recipe.getName() + ":" + source.getSourcePath() + ":" + candidate;
         Set<String> reported = ctx.computeMessageIfAbsent(EnhancementMigrationSupport.class.getName(),

@@ -57,11 +57,13 @@ tasks.processResources {
     inputs.property("orm80TargetVersion", orm80TargetVersion)
     val targetVersion = orm80TargetVersion.get()
     val processedRecipe = destinationDir.resolve("META-INF/rewrite/orm80.yml")
-    filesMatching("META-INF/rewrite/orm80.yml") {
+    val processedPlatform = destinationDir.resolve("META-INF/rewrite/platform-version.properties")
+    filesMatching(listOf("META-INF/rewrite/orm80.yml", "META-INF/rewrite/platform-version.properties")) {
         filter { line -> line.replace("@orm80TargetVersion@", targetVersion) }
     }
     doLast {
         require(!processedRecipe.readText().contains("@orm80TargetVersion@"))
+        require(!processedPlatform.readText().contains("@orm80TargetVersion@"))
     }
 }
 

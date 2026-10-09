@@ -11,7 +11,7 @@ import org.openrewrite.kotlin.tree.K;
 
 import java.util.*;
 
-import static org.hibernate.migration.recipes.orm80.EnhancementMigrationSupport.*;
+import static org.hibernate.migration.recipes.support.EnhancementMigrationSupport.*;
 
 /// Migrates canonical Hibernate enhancement blocks in Groovy and Kotlin Gradle builds.
 ///

@@ -261,19 +261,11 @@ Validator, Search, Reactive, Tools, Models, Accessor, and other unrelated projec
 Catalog aliases are retargeted to core while preserving aliases and bundle references.
 Other removed artifacts require an individually defined migration rule.
 
-Gradle adds an ordinary `hibernate-platform` dependency in each supported library
-configuration. Maven imports the platform in the applicable project/profile
-`dependencyManagement`. Library versions are omitted only with verified selected
-BOM membership and effective management. Processors, plugins, classified/custom
-artifacts, and constraints keep explicit target versions. Existing Gradle
-`enforcedPlatform` declarations are preserved; the recipe does not introduce
-forced resolution.
-
 Library and plugin aliases and bundle membership are preserved.
 ORM-only shared catalog versions are updated; references shared with unrelated
 libraries are replaced locally without changing the unrelated version. Catalog
-versions remain explicit unless all consumers and their platform coverage can be
-established from the supplied local build.
+versions remain explicit unless all consumers can be established from the
+supplied local build.
 
 Ivy revisions and `revConstraint` are aligned. Both Ant forms keep explicit versions;
 adding a platform dependency would not provide Maven/Gradle BOM semantics.
@@ -300,16 +292,10 @@ Local JAR paths, download tasks,
 custom artifact retrieval, imported/conditional task definitions, and arbitrary
 resolver implementations require manual work.
 
-Other BOMs, inherited management, and external constraints can
-require retaining explicit versions. The platform also manages companion libraries,
-so review the resolved dependency graph after migration.
-
 `SkippedMigrations` reports skipped declarations and incomplete portions of otherwise
 successful conversions, using `ORM_COORDINATE_IDENTITY_UNRESOLVED`,
 `ORM_COORDINATE_ARTIFACT_UNSUPPORTED`, `ORM_COORDINATE_CONFLICT`,
-`ORM_COORDINATE_VERSION_UNRESOLVED`, `ORM_COORDINATE_SYNTAX_UNSUPPORTED`, and
-`ORM_PLATFORM_MANAGEMENT_UNVERIFIED`. The last reason means the coordinates were
-aligned but an explicit version was retained because management was not proven.
+`ORM_COORDINATE_VERSION_UNRESOLVED`, and `ORM_COORDINATE_SYNTAX_UNSUPPORTED`.
 Reports refer to the leaf's original input and do not add diagnostic comments.
 
 Run build validation in a new invocation after applying the migration. A recipe can

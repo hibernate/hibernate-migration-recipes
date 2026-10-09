@@ -53,6 +53,12 @@ class RecipeArtifactTest {
                 assertEquals(name, environment.activateRecipes(name).getName());
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
             }
+            for (String simple : List.of("AdoptHibernatePlatform")) {
+                String name = "org.hibernate.migration.recipes.platform." + simple;
+                assertTrue(names.contains(name), names.toString());
+                assertEquals(name, environment.activateRecipes(name).getName());
+                assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
+            }
             assertFalse(names.contains("org.hibernate.migration.recipes.jpa4.MigratePersistencePackageDescriptors"));
             String flushRecipe = "org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode";
             assertTrue(environment.activateRecipes("org.hibernate.migration.recipes.orm80")

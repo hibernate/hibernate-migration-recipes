@@ -16,7 +16,7 @@ import org.openrewrite.xml.tree.Xml;
 import java.nio.file.Path;
 import java.util.*;
 
-import static org.hibernate.migration.recipes.orm80.EnhancementMigrationSupport.*;
+import static org.hibernate.migration.recipes.support.EnhancementMigrationSupport.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /// Exercises build-file conversion, bounded recognition, diagnostics, and fresh-parser idempotence.

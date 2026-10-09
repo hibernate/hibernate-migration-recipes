@@ -1,5 +1,6 @@
 package org.hibernate.migration.recipes.orm80;
 
+import org.hibernate.migration.recipes.support.OrmCoordinateSupport;
 import org.jspecify.annotations.NonNull;
 import org.openrewrite.*;
 import java.util.List;
@@ -14,7 +15,7 @@ public class MigrateOrmCoordinates extends Recipe {
     public MigrateOrmCoordinates(String targetVersion) { this.targetVersion = targetVersion; }
     public String getTargetVersion() { return targetVersion; }
     @Override public @NonNull String getDisplayName() { return "Migrate Hibernate ORM coordinates"; }
-    @Override public @NonNull String getDescription() { return "Relocates supported ORM dependencies, aligns tooling, and adopts the Hibernate platform in supported builds."; }
+    @Override public @NonNull String getDescription() { return "Relocates supported ORM dependencies and aligns tooling to the target ORM 8.0 release."; }
     @Override public @NonNull Validated<Object> validate() { return super.validate().and(OrmCoordinateSupport.validate(targetVersion)); }
     @Override public @NonNull List<Recipe> getRecipeList() {
         return List.of(new MigrateGradleOrmCoordinates(targetVersion), new MigrateMavenOrmCoordinates(targetVersion), new MigrateAntOrmCoordinates(targetVersion));

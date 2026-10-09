@@ -1,4 +1,4 @@
-package org.hibernate.migration.recipes.orm80;
+package org.hibernate.migration.recipes.support;
 
 import org.openrewrite.*;
 import org.openrewrite.toml.tree.Toml;
@@ -7,17 +7,17 @@ import java.util.*;
 /// Structured local catalog declarations and stable accessor identities.
 ///
 /// @author Steve Ebersole
-final class GradleOrmCatalog {
-    record Entry(Toml.KeyValue tree, String alias, String role, String group, String artifact, String version,
+public final class GradleOrmCatalog {
+    public record Entry(Toml.KeyValue tree, String alias, String role, String group, String artifact, String version,
                  String reference, Map<String, Toml.KeyValue> fields) {}
-    final Toml.Document source;
-    final List<Entry> entries = new ArrayList<>();
-    final Map<String, String> versions = new HashMap<>();
-    final Map<String, List<String>> bundles = new HashMap<>();
-    final Set<String> names = new HashSet<>();
-    final Map<UUID, Integer> positions;
+    public final Toml.Document source;
+    public final List<Entry> entries = new ArrayList<>();
+    public final Map<String, String> versions = new HashMap<>();
+    public final Map<String, List<String>> bundles = new HashMap<>();
+    public final Set<String> names = new HashSet<>();
+    public final Map<UUID, Integer> positions;
 
-    GradleOrmCatalog(Toml.Document source) {
+    public GradleOrmCatalog(Toml.Document source) {
         this.source = source;
         for (var value : source.getValues()) if (value instanceof Toml.Table table && table.getName() != null
                 && table.getName().getName().equals("versions")) {
@@ -61,19 +61,19 @@ final class GradleOrmCatalog {
         }
         positions = CoordinateSourceEdits.offsets(source, ids);
     }
-    Entry library(String name) { return entries.stream().filter(e -> e.role.equals("library") && e.alias.equals(name)).findFirst().orElse(null); }
-    Entry plugin(String name) { return entries.stream().filter(e -> e.role.equals("plugin") && e.alias.equals(name)).findFirst().orElse(null); }
-    static String accessor(String name) { return name.replace('-', '.').replace('_', '.'); }
-    static String key(Toml.KeyValue kv) {
+    public Entry library(String name) { return entries.stream().filter(e -> e.role.equals("library") && e.alias.equals(name)).findFirst().orElse(null); }
+    public Entry plugin(String name) { return entries.stream().filter(e -> e.role.equals("plugin") && e.alias.equals(name)).findFirst().orElse(null); }
+    public static String accessor(String name) { return name.replace('-', '.').replace('_', '.'); }
+    public static String key(Toml.KeyValue kv) {
         return kv.getKey() instanceof Toml.Identifier id ? id.getName() : string(kv.getKey());
     }
-    static String string(Toml tree) {
+    public static String string(Toml tree) {
         return tree instanceof Toml.Literal literal && literal.getValue() instanceof String s ? s : "";
     }
     private static String field(Map<String, Toml.KeyValue> fields, String key) {
         return fields.containsKey(key) ? string(fields.get(key).getValue()) : "";
     }
-    static String quote(String old, String value) {
+    public static String quote(String old, String value) {
         String q = old.stripLeading().startsWith("'") ? "'" : "\"";
         return q + value + q;
     }

@@ -8,7 +8,11 @@ import org.openrewrite.xml.XmlIsoVisitor;
 import org.openrewrite.xml.tree.Xml;
 import java.util.*;
 
-import static org.hibernate.migration.recipes.orm80.OrmCoordinateSupport.*;
+import org.hibernate.migration.recipes.support.CoordinateXmlEdits;
+import org.hibernate.migration.recipes.support.EnhancementMigrationSupport;
+
+import org.hibernate.migration.recipes.support.OrmCoordinateSupport;
+import static org.hibernate.migration.recipes.support.OrmCoordinateSupport.*;
 
 /// Migrates Ivy revisions and recognized inline Maven Ant Tasks dependencies.
 ///
