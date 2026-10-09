@@ -107,10 +107,12 @@ public class MigrateMavenOrmCoordinates extends Recipe {
                             reason, "Resolve this Maven declaration manually before migration.", ctx); continue;
                 }
                 Xml.Tag updated = CoordinateXmlEdits.set(CoordinateXmlEdits.set(c.tag, "groupId", GROUP), "artifactId", target);
-                updated = CoordinateXmlEdits.set(updated, "version", safeProperties.containsKey(value(c.tag, "version")) ? value(c.tag, "version") : targetVersion);
-                if (safeProperties.containsKey(value(c.tag, "version"))) {
-                    Xml.Tag property = safeProperties.get(value(c.tag, "version"));
-                    replacements.put(property.getId(), property.withValue(targetVersion));
+                if (!c.version.isEmpty()) {
+                    updated = CoordinateXmlEdits.set(updated, "version", safeProperties.containsKey(value(c.tag, "version")) ? value(c.tag, "version") : targetVersion);
+                    if (safeProperties.containsKey(value(c.tag, "version"))) {
+                        Xml.Tag property = safeProperties.get(value(c.tag, "version"));
+                        replacements.put(property.getId(), property.withValue(targetVersion));
+                    }
                 }
                 replacements.put(c.tag.getId(), updated);
             }

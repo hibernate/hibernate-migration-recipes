@@ -46,7 +46,7 @@ displayName: Adopt Hibernate platform
 description: Import the Hibernate platform BOM targeting a specific ORM release.
 recipeList:
   - org.hibernate.migration.recipes.platform.AdoptHibernatePlatform:
-      targetVersion: 8.0.0.Final
+      targetVersion: 8.0.0.Beta2
 ----
 
 Select that configured recipe in `build.gradle` instead of the default recipe:
