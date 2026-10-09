@@ -354,6 +354,7 @@ class OrmCoordinatesTest {
         assertFalse(output.contains("hibernate-platform"), output);
         assertTrue(output.contains("org.hibernate.orm"), output);
         assertTrue(output.contains("spring-boot-dependencies"), output);
+        assertFalse(output.contains(TARGET), "Managed dependency must not get an explicit version: " + output);
     }
     @Test void rejectedOptionsAndUnrelatedArtifacts() {
         for (String version : Arrays.asList(null, "", "8.+", "${orm}", "9.0.0.Final", "8.0.0-SNAPSHOT")) assertFalse(new MigrateOrmCoordinates(version).validate().isValid());

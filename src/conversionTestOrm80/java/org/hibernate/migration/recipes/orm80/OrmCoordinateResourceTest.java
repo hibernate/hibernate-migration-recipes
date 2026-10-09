@@ -19,6 +19,7 @@ class OrmCoordinateResourceTest {
         copy(repository.resolve("buildSrc/build.gradle.kts"), project.resolve("buildSrc/build.gradle.kts"));
         copy(repository.resolve("buildSrc/src/main/kotlin/MigrationTestingPlugin.kt"), project.resolve("buildSrc/src/main/kotlin/MigrationTestingPlugin.kt"));
         copy(repository.resolve("src/main/resources/META-INF/rewrite/orm80.yml"), project.resolve("src/main/resources/META-INF/rewrite/orm80.yml"));
+        copy(repository.resolve("src/main/resources/META-INF/rewrite/platform-version.properties"), project.resolve("src/main/resources/META-INF/rewrite/platform-version.properties"));
         Path build = project.resolve("build.gradle.kts");
         String initial = Files.readString(build);
         // Only resource processing runs; neither version needs to be resolved for substitution.

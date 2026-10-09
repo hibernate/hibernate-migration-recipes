@@ -56,7 +56,7 @@ public class AdoptHibernatePlatform extends ScanningRecipe<AdoptHibernatePlatfor
             if (in != null) props.load(in);
         }
         catch (IOException ignored) {}
-        return props.getProperty("targetVersion", "8.0.0.Final");
+        return props.getProperty("targetVersion", "8.0.0.Beta3");
     }
     @Override public @NonNull String getDisplayName() { return "Adopt Hibernate platform"; }
     @Override public @NonNull String getDescription() { return "Imports the Hibernate platform BOM and omits explicit versions for managed library artifacts."; }

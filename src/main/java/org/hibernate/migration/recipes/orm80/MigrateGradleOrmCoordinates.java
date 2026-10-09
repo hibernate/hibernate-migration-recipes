@@ -193,7 +193,7 @@ public class MigrateGradleOrmCoordinates extends ScanningRecipe<MigrateGradleOrm
         }
         if (d.notation().equals("string") || d.notation().equals("extended")) {
             Expression argument = d.arguments().get(0);
-            String coordinate = GROUP + ":" + artifact + (omit ? "" : ":" + (preserveReference ? d.version() : targetVersion));
+            String coordinate = GROUP + ":" + artifact + (omit || d.version().isEmpty() ? "" : ":" + (preserveReference ? d.version() : targetVersion));
             if (d.notation().equals("extended")) {
                 String printed = CoordinateSourceEdits.printed(source, argument);
                 String raw = printed.substring(1, printed.length() - 1);
@@ -221,7 +221,7 @@ public class MigrateGradleOrmCoordinates extends ScanningRecipe<MigrateGradleOrm
                 updated = updated.substring(0, start) + retainedComments(source, argument) + updated.substring(end);
             }
         }
-        else if (!omit) {
+        else if (!omit && !d.version().isEmpty()) {
             int end = updated.indexOf(')');
             if (end < 0) updated += ", version: '" + targetVersion + "'";
             else updated = updated.substring(0, end) + (updated.substring(0, end).contains("name =") ? ", version = " : ", version: ")
