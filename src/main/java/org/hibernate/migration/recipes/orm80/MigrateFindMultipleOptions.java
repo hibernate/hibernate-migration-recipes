@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.hibernate.migration.recipes.support.ChangeTypeSupport;
 import org.jspecify.annotations.NonNull;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -40,14 +41,12 @@ public class MigrateFindMultipleOptions extends Recipe {
 
 	@Override
 	public @NonNull TreeVisitor<?, ExecutionContext> getVisitor() {
-		return new JavaIsoVisitor<>() {
+		return Preconditions.check(Preconditions.or(OPTIONS.stream()
+				.map(option -> new UsesType<>("org.hibernate." + option, false))
+				.toArray(TreeVisitor[]::new)), new JavaIsoVisitor<>() {
 			@Override
 			public J.@NonNull CompilationUnit visitCompilationUnit(
 					J.@NonNull CompilationUnit cu, @NonNull ExecutionContext ctx) {
-				if (OPTIONS.stream().noneMatch(option -> new UsesType<ExecutionContext>("org.hibernate." + option, false)
-						.visitNonNull(cu, ctx) != cu)) {
-					return cu;
-				}
 				// Preserve existing nested references even if ChangeType shortens other references globally.
 				Map<UUID, J> existingReferences = new HashMap<>();
 				J.CompilationUnit migrated = (J.CompilationUnit) new JavaVisitor<ExecutionContext>() {
@@ -180,6 +179,6 @@ public class MigrateFindMultipleOptions extends Recipe {
 					}
 				}.visitNonNull(migrated, ctx);
 			}
-		};
+		});
 	}
 }
