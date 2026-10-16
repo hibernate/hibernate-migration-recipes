@@ -1,0 +1,27 @@
+= MigrateMapKeyNameToValue
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigrateMapKeyNameToValue]]
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue`.
+
+Migrates the deprecated Jakarta Persistence `@MapKey` member.
+
+== Conversions
+
+Replaces `@MapKey(name="the-name")` with `@MapKey("the-name")`.
+The original value expression and comments are preserved. Annotations already
+using `value`, and annotations with no explicit members, remain unchanged.
+
+== Supported inputs
+
+Java `jakarta.persistence.MapKey` annotations with a single explicit `name`
+member, including constant and expression values.
+
+== Manual review
+
+Annotations specifying both `name` and `value`, or unsupported member shapes,
+remain unchanged. `SkippedMigrations` reports `MAP_KEY_CONFLICT`,
+`UNSUPPORTED_ANNOTATION_SHAPE`, or `MISSING_TYPE_ATTRIBUTION` for recognized
+unresolved candidates.

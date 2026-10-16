@@ -1,0 +1,109 @@
+= MigrateOrmCoordinates
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigrateOrmCoordinates]]
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates`.
+
+Migrates artifact coordinates and versions using supported Gradle, Maven, Ivy, and Maven Ant Tasks declarations.
+
+== Selecting the recipe
+
+Its independently selectable leaves are
+
+* `MigrateGradleOrmCoordinates`
+* `MigrateMavenOrmCoordinates`
+* `MigrateAntOrmCoordinates`
+
+Each requires an exact published ORM 8.0 `targetVersion`.
+
+For example, save this configured recipe as `rewrite.yml` in your application's
+project directory:
+
+[source,yaml]
+----
+type: specs.openrewrite.org/v1beta/recipe
+name: example.MigrateOrmBuild
+displayName: Migrate ORM build coordinates
+recipeList:
+  - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
+      targetVersion: 8.0.0.Beta2
+----
+
+With the OpenRewrite plugin and recipe JAR configured as shown under
+link:index.adoc#_running_the_migration[Running the migration], activate the configured recipe in `build.gradle`:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe('example.MigrateOrmBuild')
+    exportDatatables = true
+}
+----
+
+Preview with `./gradlew rewriteDryRun`, then apply with `./gradlew rewriteRun`.
+Selecting the coordinate recipe directly by class name does not supply its required
+`targetVersion`; use the configured recipe above or either ORM composite.
+
+Both `orm80` and `orm80-required` supply the same version from this recipe project's configured
+migration target environment. Changing its `ormVersion` regenerates the packaged
+composites on the next build/publication. A published recipe JAR keeps that exact
+target; the consuming application's old dependency version does not select it.
+
+== Conversions
+
+The migration uses an explicit artifact allowlist -
+
+* it updates coordinates using the historical `org.hibernate` group-id to the newer `org.hibernate.orm` group-id
+* renames `hibernate-jpamodelgen` to `hibernate-processor`
+* renames legacy Maven enhancement-plugin aliases to `org.hibernate.orm:hibernate-maven-plugin`
+
+Existing canonical declarations are also aligned.
+Validator, Search, Reactive, Tools, Models, Accessor, and other unrelated projects keep their declarations.
+
+`hibernate-entitymanager` is replaced by `org.hibernate.orm:hibernate-core`, or removed when an equivalent core declaration exists in the same dependency scope and configuration.
+Catalog aliases are retargeted to core while preserving aliases and bundle references.
+Other removed artifacts require an individually defined migration rule.
+
+Library and plugin aliases and bundle membership are preserved.
+ORM-only shared catalog versions are updated; references shared with unrelated
+libraries are replaced locally without changing the unrelated version. Catalog
+versions remain explicit unless all consumers can be established from the
+supplied local build.
+
+Ivy revisions and `revConstraint` are aligned. Both Ant forms keep explicit versions;
+adding a platform dependency would not provide Maven/Gradle BOM semantics.
+
+== Supported inputs
+
+Gradle support covers Groovy/Kotlin project scripts, conventional dependency
+configurations, literal plugin versions, direct string/named coordinates, and
+local TOML catalogs.
+
+Maven support includes project/profile dependencies, dependency management,
+plugins/plugin management, plugin dependencies, and compiler processor paths.
+Ivy support covers direct module dependencies with explicit revisions. Ant support
+covers recognized Maven Ant Tasks namespaces and local task aliases. Referenced
+POM files migrate when included among the inputs.
+
+== Manual review
+
+Conflicting dependency attributes require manual review.
+External/programmatic catalogs,
+convention plugins, imported build scripts, settings plugin management, and
+arbitrary cross-project configuration require review.
+Local JAR paths, download tasks,
+custom artifact retrieval, imported/conditional task definitions, and arbitrary
+resolver implementations require manual work.
+
+`SkippedMigrations` reports skipped declarations and incomplete portions of otherwise
+successful conversions, using `ORM_COORDINATE_IDENTITY_UNRESOLVED`,
+`ORM_COORDINATE_ARTIFACT_UNSUPPORTED`, `ORM_COORDINATE_CONFLICT`,
+`ORM_COORDINATE_VERSION_UNRESOLVED`, and `ORM_COORDINATE_SYNTAX_UNSUPPORTED`.
+Reports refer to the leaf's original input and do not add diagnostic comments.
+
+Run build validation in a new invocation after applying the migration. A recipe can
+edit the build script running Rewrite, but Gradle/Maven have already evaluated that
+script for the current invocation. Coordinate conversion does not replace the
+current source parser classpath.
