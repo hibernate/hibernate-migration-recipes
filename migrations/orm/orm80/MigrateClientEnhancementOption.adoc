@@ -1,0 +1,65 @@
+= MigrateClientEnhancementOption
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigrateClientEnhancementOption]]
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption`.
+
+Renames `enableExtendedEnhancement` to `enableClientEnhancement` in supported Gradle, Maven, and Ant configuration.
+
+== Selecting the recipe
+
+Its independently selectable leaves are
+
+* `MigrateGradleClientEnhancementOption`
+* `MigrateMavenClientEnhancementOption`
+* `MigrateAntClientEnhancementOption`
+
+== Conversions
+
+If only the old option exists, its value or expression is preserved. If both options
+exist in one supported configuration, the new option wins, including explicit
+`false`, and the obsolete setting is removed. Comments are retained.
+
+== Supported inputs
+
+* Gradle: Groovy `build.gradle` and Kotlin `build.gradle.kts` scripts with canonical
+`hibernate { enhancement { ... } }` blocks. The script must explicitly apply
+`org.hibernate.orm`, or the parser must attribute the Hibernate receiver. Direct
+assignments and `.set(...)` statements, including `this` qualification, are
+supported.
+* Maven: Direct option elements in plugin and execution configurations, including
+`pluginManagement` and profiles, for `org.hibernate.orm:hibernate-maven-plugin`,
+`org.hibernate.orm:hibernate-enhance-maven-plugin`, and
+`org.hibernate:hibernate-enhance-maven-plugin`. Same-block conflict cleanup is
+supported even with a parent.
+* Ant: Unnamespaced project documents with an explicit same-document `taskdef`
+whose classname is `org.hibernate.tool.enhance.EnhancementTask`. Arbitrary literal
+task aliases and property-valued attributes are supported.
+
+== Manual review
+
+* Gradle: Duplicate writes, multiple enhancement blocks, conditional/nested
+writes, legacy reads, and unsupported setters require review. When both names
+occur, the old value must be a boolean literal: removing an arbitrary expression
+could discard side effects. Cross-project configuration, convention plugins,
+imported scripts, and arbitrary receiver aliases are outside initial support.
+* Maven: Old-only settings are skipped when
+a parent or another scope for the same plugin could supply the new option.
+Duplicate elements,
+configuration merge directives, nested element values, and unresolved plugin
+identity require review. Parent POMs and profile activation are not evaluated.
+* Ant: Conditional, dynamic,
+competing, imported, resource-based, namespaced, or macro-based task configuration
+requires manual review.
+
+Recognized skipped candidates use `SkippedMigrations` with reason codes
+`ENHANCEMENT_IDENTITY_UNRESOLVED`, `ENHANCEMENT_CONFIGURATION_AMBIGUOUS`,
+`ENHANCEMENT_INHERITANCE_UNRESOLVED`, or `ENHANCEMENT_SYNTAX_UNSUPPORTED`.
+Unrelated options are not changed. No dependency, plugin, or task-class upgrades
+are performed by this recipe.
+
+The build script running Rewrite itself is eligible. Run build validation in a
+separate invocation after applying changes so the updated configuration is evaluated.
+The chosen Hibernate tooling release must expose `enableClientEnhancement`.

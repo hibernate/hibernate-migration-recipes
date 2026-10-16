@@ -1,0 +1,41 @@
+= MigratePersistenceXml
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigratePersistenceXml]]
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigratePersistenceXml`.
+
+Migrates `persistence.xml` files updating the version to 4.0.
+
+== Conversions
+
+`org.hibernate.migration.recipes.jpa4.MigratePersistenceXml` converts explicit dot-separated package references:
+
+[source,xml]
+----
+<class>com.acme.model.package-info</class>
+----
+
+becomes:
+
+[source,xml]
+----
+<package-descriptor>com.acme.model</package-descriptor>
+----
+
+Generated package descriptors follow all ordinary `class` entries in the persistence unit, before later schema elements. Ordinary classes remain unchanged. An equivalent existing descriptor prevents a duplicate from being generated. Package matching and duplicate detection are scoped to each persistence unit. A skipped candidate in any unit leaves the entire document unchanged.
+
+== Supported inputs
+
+A `persistence` root in the Jakarta Persistence namespace, with version 3.0, 3.1,
+3.2, or 4.0. Custom filenames and namespace prefixes are supported.
+Package references must be explicit and dot-separated; packages are not inferred
+from ordinary class names. Supported version 4.0 documents are also eligible.
+See link:xml-descriptors.adoc[shared XML descriptor behavior] for shared eligibility and schema metadata rules.
+
+== Manual review
+
+Slash-separated paths, missing package names, `.class` suffixes, and ambiguous content remain unchanged with `XML_PACKAGE_DESCRIPTOR_UNSUPPORTED` diagnostics.
+Unsupported versions and conflicting schema metadata follow the shared review
+rules in link:xml-descriptors.adoc[shared XML descriptor behavior].

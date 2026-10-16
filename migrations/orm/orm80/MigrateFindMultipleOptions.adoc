@@ -1,0 +1,29 @@
+= MigrateFindMultipleOptions
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigrateFindMultipleOptions]]
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions`.
+
+Migrates Hibernate multi-ID loading option types to `FindMultipleOption`.
+
+== Conversions
+
+Relocates `org.hibernate.OrderingMode`, `org.hibernate.SessionCheckMode`,
+`org.hibernate.RemovalsMode`, and `org.hibernate.BatchSize` to the corresponding
+nested types in `org.hibernate.FindMultipleOption`. Enum constants, explicit
+option values, and loading calls are preserved. Conflicting simple names use
+fully qualified references; existing nested-type references are retained.
+
+== Supported inputs
+
+Attributed Java references, including imports, static and wildcard imports,
+declarations, enum constants, class literals, and batch-size constructors and
+constructor references.
+
+== Manual review
+
+Supply the source Hibernate API for type attribution. Unresolved qualified
+references are retained. References outside Java source, such as reflective
+class-name strings, require separate review.

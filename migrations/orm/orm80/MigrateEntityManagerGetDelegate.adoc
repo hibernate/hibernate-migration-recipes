@@ -1,0 +1,27 @@
+= MigrateEntityManagerGetDelegate
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigrateEntityManagerGetDelegate]]
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate`.
+
+Migrates Hibernate-backed `EntityManager.getDelegate()` calls to `unwrap`.
+
+== Conversions
+
+Replaces `getDelegate()` with `unwrap(java.lang.Object.class)`, preserving
+the receiver and its evaluation, including implicit, `this`, and `super` receivers.
+
+== Supported inputs
+
+Java method invocations resolved to the no-argument method declared by
+`jakarta.persistence.EntityManager`. Calls through EntityManager subtypes are
+supported when they resolve to that declaration.
+
+== Manual review
+
+Method references, application overrides, and declarations that shadow `java`
+are retained. `SkippedMigrations` reports `UNSUPPORTED_METHOD_REFERENCE`,
+`UNSUPPORTED_METHOD_OVERRIDE`, `NAME_RESOLUTION_CONFLICT`, or
+`MISSING_TYPE_ATTRIBUTION` for recognized unresolved candidates.

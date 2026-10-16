@@ -1,0 +1,121 @@
+= Hibernate ORM 7.4 to 8.0
+:toc2:
+:toclevels: 3
+:toc
+
+link:../index.adoc[Hibernate ORM migrations]
+
+OpenRewrite recipes for migrating applications to Hibernate ORM 8.0 and Jakarta Persistence 4.0, from Hibernate ORM 7.4 and Jakarta Persistence 3.2.
+
+See the https://docs.hibernate.org/orm/8.0/migration-guide/[Hibernate ORM 8.0 Migration Guide] for the target version's requirements, API changes, and behavior changes.
+
+== Running the migration
+
+Choose one of these composite recipes:
+
+[cols="2,4",options="header"]
+|===
+|Recipe identifier |Purpose
+|`org.hibernate.migration.recipes.orm80` |Comprehensive upgrade, including required migrations and migration away from supported deprecated APIs and configuration.
+|`org.hibernate.migration.recipes.orm80-required` |Available migrations needed for supported usages to compile, bootstrap, or preserve behavior with ORM 8.0.
+|===
+
+The comprehensive composite includes the required composite. Neither includes temporal modernization or Hibernate platform adoption; select those separately.
+Both can leave unsupported usages requiring manual work and do not guarantee a complete automated upgrade.
+
+For example, in Gradle -
+
+* apply the OpenRewrite plugin
+* add `hibernate-migration-recipes` as a dependency
+* activate this recipe
+
+[source,groovy]
+.Enabling with Gradle (versions omitted)
+----
+plugins {
+    id 'java'
+    id 'org.openrewrite.rewrite'
+}
+
+dependencies {
+    rewrite "org.hibernate.migration:hibernate-migration-recipes"
+}
+
+rewrite {
+    activeRecipe('org.hibernate.migration.recipes.orm80')
+    exportDatatables = true
+}
+----
+
+Preview the changes with `./gradlew rewriteDryRun`.
+Apply them with `./gradlew rewriteRun`.
+See the https://docs.openrewrite.org/reference/gradle-plugin-configuration[OpenRewrite Gradle plugin documentation] for plugin and dependency setup.
+
+See link:../../../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for details about diagnostic reports.
+
+To select only required migrations, replace the active recipe in the example above:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe('org.hibernate.migration.recipes.orm80-required')
+    exportDatatables = true
+}
+----
+
+The rest of this guide abbreviates these composite names as `orm80` and `orm80-required`.
+All recipes below are included in `orm80` and can also be selected independently using their fully qualified recipe (class) names. XML-only selection is shown in link:xml-descriptors.adoc[shared XML descriptor behavior].
+
+=== Composite membership
+
+[cols="3,1,1",options="header"]
+|===
+|Recipe |`orm80` |`orm80-required`
+|link:MigrateNamedQueryToStatement.adoc[`MigrateNamedQueryToStatement`] |Yes |Yes
+|link:MigratePersistenceXml.adoc[`MigratePersistenceXml`] |Yes |Yes
+|link:MigrateOrmXml.adoc[`MigrateOrmXml`] |Yes |No
+|link:MigrateEntityManagerGetDelegate.adoc[`MigrateEntityManagerGetDelegate`] |Yes |No
+|link:MigrateMapKeyNameToValue.adoc[`MigrateMapKeyNameToValue`] |Yes |No
+|link:MigrateMappingXml.adoc[`MigrateMappingXml`] |Yes |Yes
+|link:MigrateQueryFlushMode.adoc[`MigrateQueryFlushMode`] |Yes |Yes
+|link:MigrateQueryHints.adoc[`MigrateQueryHints`] |Yes |Yes
+|link:MigrateOptimisticLockExclusion.adoc[`MigrateOptimisticLockExclusion`] |Yes |No
+|link:MigrateFindMultipleOptions.adoc[`MigrateFindMultipleOptions`] |Yes |Yes
+|link:MigrateSqlResultVerification.adoc[`MigrateSqlResultVerification`] |Yes |Yes
+|link:MigrateClientEnhancementOption.adoc[`MigrateClientEnhancementOption`] |Yes |No
+|link:MigrateOrmCoordinates.adoc[`MigrateOrmCoordinates`] |Yes |Yes
+|===
+
+“Required” selects existing recipes that address incompatible usages; it does not promise the fewest possible textual edits. The selected XML recipes also update eligible descriptor versions even when no content conversion is necessary. `MigrateFindMultipleOptions` also migrates the deprecated top-level `BatchSize`, and coordinate migration retains its normalization and version alignment. Existing atomic descriptor conflict handling still applies.
+
+JPA `orm.xml` versions 3.0–3.2 remain supported by the configured target, so their metadata updates are comprehensive-only. `EntityManager.getDelegate()`, `MapKey.name()`, Hibernate's `OptimisticLock`, and the old enhancement option remain available as deprecated usages. Conversely, query-hint constants require migration because `org.hibernate.jpa.QueryHints` has been removed.
+
+The required transformations run first; comprehensive-only transformations follow. Applications can run `orm80-required` first and `orm80` later to apply the remaining modernization. A second successful execution makes no further changes. Review skipped-migration reports after either selection.
+
+== Individual recipes
+
+=== Jakarta Persistence 4.0 recipes
+
+* link:MigrateNamedQueryToStatement.adoc[MigrateNamedQueryToStatement]
+* link:MigratePersistenceXml.adoc[MigratePersistenceXml]
+* link:MigrateOrmXml.adoc[MigrateOrmXml]
+* link:MigrateEntityManagerGetDelegate.adoc[MigrateEntityManagerGetDelegate]
+* link:MigrateMapKeyNameToValue.adoc[MigrateMapKeyNameToValue]
+
+=== Hibernate ORM 8.0 recipes
+
+* link:MigrateOrmCoordinates.adoc[MigrateOrmCoordinates]
+* link:MigrateMappingXml.adoc[MigrateMappingXml]
+* link:MigrateQueryFlushMode.adoc[MigrateQueryFlushMode]
+* link:MigrateQueryHints.adoc[MigrateQueryHints]
+* link:MigrateOptimisticLockExclusion.adoc[MigrateOptimisticLockExclusion]
+* link:MigrateFindMultipleOptions.adoc[MigrateFindMultipleOptions]
+* link:MigrateSqlResultVerification.adoc[MigrateSqlResultVerification]
+* link:MigrateClientEnhancementOption.adoc[MigrateClientEnhancementOption]
+
+== Related migrations
+
+Neither composite includes these separately selectable migrations:
+
+* link:../adopt-hibernate-platform.adoc[Adopt Hibernate Platform]
+* link:../temporal-annotation.adoc[Modernize @Temporal mappings]

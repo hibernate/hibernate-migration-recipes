@@ -1,0 +1,26 @@
+= MigrateQueryFlushMode
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigrateQueryFlushMode]]
+Recipe name is `org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode`.
+
+Migrates Hibernate query flush-mode references to Jakarta Persistence.
+
+== Conversions
+
+Replaces `org.hibernate.query.QueryFlushMode` with
+`jakarta.persistence.QueryFlushMode`. Enum constants and query method calls are
+preserved. Naming conflicts use fully qualified references.
+
+== Supported inputs
+
+Java references to the source enum, including imports, explicit and wildcard
+static imports, declarations, and named-query annotation values.
+
+== Manual review
+
+Supply the source Hibernate API for type attribution. Review unresolved
+references and references outside Java source, such as reflective class-name strings,
+which are outside this type migration.
