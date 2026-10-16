@@ -5,7 +5,7 @@
 Select `org.hibernate.migration.recipes.platform.AdoptHibernatePlatform` to import the `hibernate-platform` BOM and omit explicit versions for managed library artifacts. It is designed to run after `MigrateOrmCoordinates` (or on builds that already use `org.hibernate.orm` coordinates).
 
 [NOTE]
-The link:orm80.adoc[ORM 8.0 Migration] does not run this recipe. It must be run separately.
+Neither composite in the link:orm80.adoc[ORM 8.0 migration] (`orm80` or `orm80-required`) runs this recipe. It must be selected separately.
 
 
 == Enabling with Gradle
