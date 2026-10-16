@@ -5,7 +5,7 @@
 Select `org.hibernate.migration.recipes.temporal.MigrateTemporalAnnotation` explicitly for `@Temporal` modernization. It coordinates supported scalar Date/Calendar fields, direct getters/setters, initializers, assignments, and callers across the sources supplied to one execution. Both field annotations and direct getter annotations are supported. Simple local aliases, null comparisons, and transfers between compatible converted properties are supported; unrelated usages retain their types. Complex accessors, overridden or overloaded accessor contracts, escaping values, legacy temporal operations, collections, and custom mappings leave the affected property and dependent conversions unchanged with a diagnostic. External clients and reflection require review.
 
 [NOTE]
-The link:orm80.adoc[ORM 8.0 Migration] does not run this migration.  It must be run separately.
+Neither composite in the link:orm80.adoc[ORM 8.0 migration] (`orm80` or `orm80-required`) runs this migration. It must be selected separately.
 
 
 == Enabling with Gradle

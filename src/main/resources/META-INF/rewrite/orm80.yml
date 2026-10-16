@@ -1,29 +1,36 @@
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.hibernate.migration.recipes.orm80
-displayName: Migrate from Hibernate ORM 7.4 to 8.0
+displayName: Migrate from Hibernate ORM 7.4 to 8.0 comprehensively
 description: >-
-  Migrates Hibernate ORM 7.4 usage to ORM 8.0.
-  Includes the JPA 3.x to 4.0 migration, upgrades Hibernate mapping XML
-  from schema 7.0 to 8.0, migrates table and column comments, and removes
-  the ignored many-to-many orphan-removal attribute, and replaces Hibernate's
-  QueryFlushMode enum with Jakarta Persistence's QueryFlushMode, and relocates
-  multi-ID loading options to nested FindMultipleOption types, and renames the
-  client enhancement option in supported build configurations, migrates custom-SQL
-  result verification, migrates query-hint constants while preserving their keys,
-  and migrates Java optimistic-lock exclusion annotations.
+  Applies the required ORM 7.4 to 8.0 migrations and migrates supported deprecated
+  APIs and configuration. Includes descriptor modernization. Does not include
+  temporal modernization or Hibernate platform adoption. Unsupported usages may
+  require manual migration; this recipe does not guarantee a complete upgrade.
 recipeList:
-  - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
-  - org.hibernate.migration.recipes.jpa4.MigratePersistenceXml
+  - org.hibernate.migration.recipes.orm80-required
   - org.hibernate.migration.recipes.jpa4.MigrateOrmXml
   - org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate
   - org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue
+  - org.hibernate.migration.recipes.orm80.MigrateOptimisticLockExclusion
+  - org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.hibernate.migration.recipes.orm80-required
+displayName: Apply required Hibernate ORM 7.4 to 8.0 migrations
+description: >-
+  Migrates supported usages that need changes to compile, bootstrap, or preserve
+  behavior with ORM 8.0. Selected recipes may also perform ancillary edits such as
+  descriptor version updates. Does not include temporal modernization or Hibernate
+  platform adoption. Unsupported usages may require manual migration; this recipe
+  does not guarantee a complete upgrade.
+recipeList:
+  - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
+  - org.hibernate.migration.recipes.jpa4.MigratePersistenceXml
   - org.hibernate.migration.recipes.orm80.MigrateMappingXml
   - org.hibernate.migration.recipes.orm80.MigrateQueryFlushMode
   - org.hibernate.migration.recipes.orm80.MigrateQueryHints
-  - org.hibernate.migration.recipes.orm80.MigrateOptimisticLockExclusion
   - org.hibernate.migration.recipes.orm80.MigrateFindMultipleOptions
   - org.hibernate.migration.recipes.orm80.MigrateSqlResultVerification
-  - org.hibernate.migration.recipes.orm80.MigrateClientEnhancementOption
   - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
       targetVersion: '@orm80TargetVersion@'

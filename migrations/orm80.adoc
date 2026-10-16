@@ -7,7 +7,17 @@ OpenRewrite recipes for migrating applications to Hibernate ORM 8.0 and Jakarta 
 
 == Running the migration
 
-The main aggregate recipe is named `org.hibernate.migration.recipes.orm80`.  Select it for the aggregate ORM 7.4 to 8.0 upgrade.
+Choose one of these composite recipes:
+
+[cols="2,4",options="header"]
+|===
+|Recipe identifier |Purpose
+|`org.hibernate.migration.recipes.orm80` |Comprehensive upgrade, including required migrations and migration away from supported deprecated APIs and configuration.
+|`org.hibernate.migration.recipes.orm80-required` |Available migrations needed for supported usages to compile, bootstrap, or preserve behavior with ORM 8.0.
+|===
+
+The comprehensive composite includes the required composite. Neither includes temporal modernization or Hibernate platform adoption; select those separately.
+Both can leave unsupported usages requiring manual work and do not guarantee a complete automated upgrade.
 
 For example, in Gradle -
 
@@ -39,10 +49,44 @@ See the https://docs.openrewrite.org/reference/gradle-plugin-configuration[OpenR
 
 See link:../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations] for details about diagnostic reports.
 
-NOTE: The rest of this documentation will refer to this aggregate recipe as `orm80`.
+To select only required migrations, replace the active recipe in the example above:
 
-All recipes listed below are included in this `orm80` aggregate recipe, but may also be selected independently
-using their fully qualified recipe (class) names. XML-only selection is shown in <<xml-descriptors>>.
+[source,groovy]
+----
+rewrite {
+    activeRecipe('org.hibernate.migration.recipes.orm80-required')
+    exportDatatables = true
+}
+----
+
+The rest of this guide abbreviates these composite names as `orm80` and `orm80-required`.
+All recipes below are included in `orm80` and can also be selected independently using their fully qualified recipe (class) names. XML-only selection is shown in <<xml-descriptors>>.
+
+=== Composite membership
+
+[cols="3,1,1",options="header"]
+|===
+|Recipe |`orm80` |`orm80-required`
+|`MigrateNamedQueryToStatement` |Yes |Yes
+|`MigratePersistenceXml` |Yes |Yes
+|`MigrateOrmXml` |Yes |No
+|`MigrateEntityManagerGetDelegate` |Yes |No
+|`MigrateMapKeyNameToValue` |Yes |No
+|`MigrateMappingXml` |Yes |Yes
+|`MigrateQueryFlushMode` |Yes |Yes
+|`MigrateQueryHints` |Yes |Yes
+|`MigrateOptimisticLockExclusion` |Yes |No
+|`MigrateFindMultipleOptions` |Yes |Yes
+|`MigrateSqlResultVerification` |Yes |Yes
+|`MigrateClientEnhancementOption` |Yes |No
+|`MigrateOrmCoordinates` |Yes |Yes
+|===
+
+“Required” selects existing recipes that address incompatible usages; it does not promise the fewest possible textual edits. The selected XML recipes also update eligible descriptor versions even when no content conversion is necessary. `MigrateFindMultipleOptions` also migrates the deprecated top-level `BatchSize`, and coordinate migration retains its normalization and version alignment. Existing atomic descriptor conflict handling still applies.
+
+JPA `orm.xml` versions 3.0–3.2 remain supported by the configured target, so their metadata updates are comprehensive-only. `EntityManager.getDelegate()`, `MapKey.name()`, Hibernate's `OptimisticLock`, and the old enhancement option remain available as deprecated usages. Conversely, query-hint constants require migration because `org.hibernate.jpa.QueryHints` has been removed.
+
+The required transformations run first; comprehensive-only transformations follow. Applications can run `orm80-required` first and `orm80` later to apply the remaining modernization. A second successful execution makes no further changes. Review skipped-migration reports after either selection.
 
 
 == Jakarta Persistence 4.0 recipes
@@ -239,11 +283,11 @@ rewrite {
 
 Preview with `./gradlew rewriteDryRun`, then apply with `./gradlew rewriteRun`.
 Selecting the coordinate recipe directly by class name does not supply its required
-`targetVersion`; use the configured recipe above or the `orm80` aggregate.
+`targetVersion`; use the configured recipe above or either ORM composite.
 
-The `orm80` aggregate supplies the version from this recipe project's configured
+Both `orm80` and `orm80-required` supply the same version from this recipe project's configured
 migration target environment. Changing its `ormVersion` regenerates the packaged
-aggregate on the next build/publication. A published recipe JAR keeps that exact
+composites on the next build/publication. A published recipe JAR keeps that exact
 target; the consuming application's old dependency version does not select it.
 
 ==== Conversions
