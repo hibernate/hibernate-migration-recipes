@@ -125,6 +125,16 @@ public final class MigrationSupport {
         /// @param table the table receiving skipped-candidate rows
         protected JavaVisitor(Recipe recipe, SkippedMigrations table) { this.recipe = recipe; this.table = table; }
 
+        /// Accepts Java compilation units, whose imports and original positions this visitor captures.
+        ///
+        /// @param sourceFile the source considered for traversal
+        /// @param ctx the active execution context
+        /// @return whether the source is a Java compilation unit
+        @Override
+        public boolean isAcceptable(SourceFile sourceFile, ExecutionContext ctx) {
+            return sourceFile instanceof J.CompilationUnit && super.isAcceptable(sourceFile, ctx);
+        }
+
         /// Captures incoming source text and node offsets before delegating traversal.
         ///
         /// @param cu the compilation unit about to be visited

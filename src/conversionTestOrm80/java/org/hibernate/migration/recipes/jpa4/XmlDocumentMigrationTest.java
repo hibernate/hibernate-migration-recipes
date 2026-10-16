@@ -43,7 +43,7 @@ class XmlDocumentMigrationTest {
         for (Descriptor family : List.of(Descriptor.PERSISTENCE, Descriptor.MAPPING)) {
             String invalid = document(family, true);
             var recipe = recipe(family);
-            for (Recipe selected : List.of(recipe, composite("orm80"))) {
+            for (Recipe selected : List.of(recipe, composite("orm80"), composite("orm80-required"))) {
                 var outcome = run(selected, invalid);
                 assertEquals(invalid, outcome.text());
                 assertEquals(1, outcome.rows().size());

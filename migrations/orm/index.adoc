@@ -1,0 +1,14 @@
+= Hibernate ORM migrations
+
+Migration recipes and guides for Hibernate ORM.
+
+== Version migrations
+
+* link:orm80/index.adoc[Hibernate ORM 7.4 to 8.0]
+
+== Other ORM migrations
+
+These migrations are selected separately from the version migration composites:
+
+* link:adopt-hibernate-platform.adoc[Adopt Hibernate Platform]
+* link:temporal-annotation.adoc[Modernize @Temporal mappings]

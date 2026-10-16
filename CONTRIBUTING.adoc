@@ -100,7 +100,9 @@ Keep syntax variations and unchanged-input checks in the conversion suite. Add r
 
 XML conversion tests validate source and target descriptors against schemas from
 pinned published ORM artifacts. Runtime tests verify package annotation discovery
-and table/column comment metadata using actual recipe output.
+and table/column comment metadata using actual `orm80-required` composite output.
+Composite coverage checks required-only selection, comprehensive selection, and
+the equivalent result of applying them in two stages.
 
 Optimistic-lock exclusion conversion checks cover source/target compilation and
 fresh-target idempotence. Runtime checks verify version behavior for excluded basic

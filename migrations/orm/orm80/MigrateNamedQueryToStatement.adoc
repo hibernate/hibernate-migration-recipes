@@ -1,0 +1,31 @@
+= MigrateNamedQueryToStatement
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+[[_MigrateNamedQueryToStatement]]
+Recipe name is `org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement`.
+
+Migrates named mutation query annotations to Jakarta Persistence 4.0 statement annotations.
+
+== Conversions
+
+Converts supported INSERT, UPDATE, and DELETE `@NamedQuery` annotations to
+`@NamedStatement`, and `@NamedNativeQuery` annotations to `@NamedNativeStatement`.
+Supported entries in query containers are extracted as statement annotations;
+SELECT queries and unsupported entries remain in their query containers.
+Names, query text, hints, and comments are preserved.
+
+== Supported inputs
+
+Jakarta Persistence annotations on class and interface declarations, including
+repeatable query containers, with explicit `name` and literal `query` members.
+Only members supported by the target statement annotation are migrated.
+
+== Manual review
+
+Query constants and expressions, unsupported query forms or annotation shapes,
+incompatible members, unsupported annotation locations, and existing explicit
+target statement containers require review. Native SQL with result clauses or
+unsupported syntax is retained. Recognized skipped candidates are reported through
+`SkippedMigrations`; unresolved annotations use `MISSING_TYPE_ATTRIBUTION`.
