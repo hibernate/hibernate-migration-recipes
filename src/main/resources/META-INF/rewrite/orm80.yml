@@ -4,7 +4,7 @@ name: org.hibernate.migration.recipes.orm80
 displayName: Migrate from Hibernate ORM 7.4 to 8.0 comprehensively
 description: >-
   Applies the required ORM 7.4 to 8.0 migrations and migrates supported deprecated
-  APIs and configuration. Includes descriptor modernization. Does not include
+  APIs and configuration. Includes XML descriptor modernization. Does not include
   temporal modernization or Hibernate platform adoption. Unsupported usages may
   require manual migration; this recipe does not guarantee a complete upgrade.
 recipeList:
@@ -21,7 +21,7 @@ displayName: Apply required Hibernate ORM 7.4 to 8.0 migrations
 description: >-
   Migrates supported usages that need changes to compile, bootstrap, or preserve
   behavior with ORM 8.0. Selected recipes may also perform ancillary edits such as
-  descriptor version updates. Does not include temporal modernization or Hibernate
+  XML descriptor version updates. Does not include temporal modernization or Hibernate
   platform adoption. Unsupported usages may require manual migration; this recipe
   does not guarantee a complete upgrade.
 recipeList:
