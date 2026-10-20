@@ -9,6 +9,7 @@ description: >-
   require manual migration; this recipe does not guarantee a complete upgrade.
 recipeList:
   - org.hibernate.migration.recipes.orm80-required
+  - org.hibernate.migration.recipes.orm80.MigrateLoadAccess
   - org.hibernate.migration.recipes.jpa4.MigrateOrmXml
   - org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate
   - org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue

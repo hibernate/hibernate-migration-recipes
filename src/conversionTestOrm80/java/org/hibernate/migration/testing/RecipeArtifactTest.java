@@ -49,7 +49,7 @@ class RecipeArtifactTest {
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
-            for (String simple : List.of("MigrateMappingXml", "MigrateOptimisticLockExclusion", "MigrateSqlResultVerification", "MigrateQueryFlushMode", "MigrateQueryHints", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption", "MigrateOrmCoordinates", "MigrateGradleOrmCoordinates", "MigrateMavenOrmCoordinates", "MigrateAntOrmCoordinates")) {
+            for (String simple : List.of("MigrateLoadAccess", "MigrateById", "MigrateByMultipleIds", "MigrateByNaturalId", "MigrateBySimpleNaturalId", "MigrateByMultipleNaturalId", "MigrateMappingXml", "MigrateOptimisticLockExclusion", "MigrateSqlResultVerification", "MigrateQueryFlushMode", "MigrateQueryHints", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption", "MigrateOrmCoordinates", "MigrateGradleOrmCoordinates", "MigrateMavenOrmCoordinates", "MigrateAntOrmCoordinates")) {
                 String name = "org.hibernate.migration.recipes.orm80." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
@@ -76,6 +76,7 @@ class RecipeArtifactTest {
             );
             List<String> comprehensive = List.of(
                     "org.hibernate.migration.recipes.orm80-required",
+                    "org.hibernate.migration.recipes.orm80.MigrateLoadAccess",
                     "org.hibernate.migration.recipes.jpa4.MigrateOrmXml",
                     "org.hibernate.migration.recipes.jpa4.MigrateEntityManagerGetDelegate",
                     "org.hibernate.migration.recipes.jpa4.MigrateMapKeyNameToValue",
@@ -93,7 +94,12 @@ class RecipeArtifactTest {
                 for (Recipe recipe : tree) assertTrue(recipe.validate().isValid(), recipe.getName());
                 List<String> selected = tree.stream().map(Recipe::getName).toList();
                 List<String> expected = new ArrayList<>(required);
-                if (!requiredOnly) expected.addAll(comprehensive.subList(1, comprehensive.size()));
+                if (!requiredOnly) {
+                    expected.addAll(comprehensive.subList(1, comprehensive.size()));
+                    for (String leaf : List.of("ById", "ByMultipleIds", "ByNaturalId", "BySimpleNaturalId", "ByMultipleNaturalId")) {
+                        expected.add("org.hibernate.migration.recipes.orm80.Migrate" + leaf);
+                    }
+                }
                 for (String selectedName : expected) {
                     assertEquals(1, Collections.frequency(selected, selectedName), selectedName);
                 }

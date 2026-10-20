@@ -85,6 +85,7 @@ All recipes below are included in `orm80` and can also be selected independently
 |link:MigrateQueryHints.adoc[`MigrateQueryHints`] |Yes |Yes
 |link:MigrateOptimisticLockExclusion.adoc[`MigrateOptimisticLockExclusion`] |Yes |No
 |link:MigrateFindMultipleOptions.adoc[`MigrateFindMultipleOptions`] |Yes |Yes
+|link:MigrateLoadAccess.adoc[`MigrateLoadAccess`] |Yes |No
 |link:MigrateSqlResultVerification.adoc[`MigrateSqlResultVerification`] |Yes |Yes
 |link:MigrateClientEnhancementOption.adoc[`MigrateClientEnhancementOption`] |Yes |No
 |link:MigrateOrmCoordinates.adoc[`MigrateOrmCoordinates`] |Yes |Yes
@@ -100,6 +101,10 @@ To be brief:
 * JPA `orm.xml` versions 3.0–3.2 remain supported in Hibernate ORM 8.0, so their metadata updates are only included in `orm80`, not `orm80-required`.
 * `EntityManager.getDelegate()`, `MapKey.name()`, Hibernate's `OptimisticLock`, and the old enhancement option remain available in Hibernate ORM 8.0 as deprecated usages, so `orm80-required` won't migrate them.
 * Query-hint constants are addressed by `orm80-required` because `org.hibernate.jpa.QueryHints` has been removed.
+
+Deprecated APIs that can be modernized while preserving supported behavior belong in `orm80`.
+Migrations requiring an application policy or data-model choice remain separately selected.
+Fluent loader migration is comprehensive-only; its unsupported forms, including references, remain unchanged with diagnostics.
 
 The required transformations run first; comprehensive-only transformations follow. Applications can run `orm80-required` first and `orm80` later to apply the remaining modernization. A second successful execution makes no further changes. Review skipped-migration reports after either selection.
 
@@ -121,6 +126,7 @@ The required transformations run first; comprehensive-only transformations follo
 * link:MigrateQueryHints.adoc[MigrateQueryHints]
 * link:MigrateOptimisticLockExclusion.adoc[MigrateOptimisticLockExclusion]
 * link:MigrateFindMultipleOptions.adoc[MigrateFindMultipleOptions]
+* link:MigrateLoadAccess.adoc[MigrateLoadAccess]
 * link:MigrateSqlResultVerification.adoc[MigrateSqlResultVerification]
 * link:MigrateClientEnhancementOption.adoc[MigrateClientEnhancementOption]
 

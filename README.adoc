@@ -10,7 +10,7 @@ See link:CONTRIBUTING.adoc[the contributor guide] for the project layout, custom
 
 Select a recipe by its identifier, not its YAML filename. A composite recipe groups related changes for an upgrade; individual recipes let you select specific conversions. Choose recipes for the Hibernate project and version you are upgrading.
 
-For ORM 7.4 to 8.0, select `org.hibernate.migration.recipes.orm80` for the comprehensive migration, including supported deprecated APIs and configuration, or `org.hibernate.migration.recipes.orm80-required` for the required migrations. Required recipes may also perform ancillary edits, such as descriptor version updates. Neither composite selects temporal modernization or Hibernate platform adoption. See the link:migrations/orm/orm80/index.adoc[ORM migration guide] for membership and limitations.
+For ORM 7.4 to 8.0, select `org.hibernate.migration.recipes.orm80` for the comprehensive migration, including supported deprecated APIs and configuration, or `org.hibernate.migration.recipes.orm80-required` for the required migrations. Required recipes may also perform ancillary edits, such as descriptor version updates. Behavior-preserving deprecation migrations, including supported fluent loading chains, belong in the comprehensive recipe. Migrations requiring an application policy or data-model choice remain separately selected. Neither composite selects temporal modernization or Hibernate platform adoption. See the link:migrations/orm/orm80/index.adoc[ORM migration guide] for membership and limitations.
 
 [[_available-migrations]]
 == Available migrations
