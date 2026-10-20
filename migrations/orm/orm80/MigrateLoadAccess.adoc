@@ -1,0 +1,100 @@
+= MigrateLoadAccess
+:toc:
+
+link:index.adoc[Hibernate ORM 7.4 to 8.0 migration]
+
+Select `org.hibernate.migration.recipes.orm80.MigrateLoadAccess` to migrate supported
+completed fluent loading chains. It is included in `orm80`, and excluded from
+`orm80-required` because the legacy APIs remain available in ORM 8.0.
+
+The independently selectable leaf recipes share the prefix
+`org.hibernate.migration.recipes.orm80.`:
+
+* `MigrateById`
+* `MigrateByMultipleIds`
+* `MigrateByNaturalId`
+* `MigrateBySimpleNaturalId`
+* `MigrateByMultipleNaturalId`
+
+== Conversions
+
+For example:
+
+[source,java]
+----
+session.byId(Book.class).load(id);
+session.byId(Book.class).loadOptional(id);
+session.bySimpleNaturalId(Book.class).load(isbn);
+session.byNaturalId(Book.class).using("isbn", isbn).load();
+session.byMultipleIds(Book.class).multiLoad(ids);
+----
+
+becomes:
+
+[source,java]
+----
+session.find(Book.class, id, org.hibernate.LockMode.NONE);
+java.util.Optional.ofNullable(session.find(Book.class, id, org.hibernate.LockMode.NONE));
+session.find(Book.class, isbn, org.hibernate.KeyType.NATURAL, org.hibernate.LockMode.NONE);
+session.find(Book.class, java.util.Collections.singletonMap("isbn", isbn), org.hibernate.KeyType.NATURAL, org.hibernate.LockMode.NONE);
+session.findMultiple(Book.class, ids, org.hibernate.FindMultipleOption.SessionCheckMode.DISABLED,
+        org.hibernate.ReadOnlyMode.READ_WRITE, org.hibernate.LockMode.NONE);
+----
+
+Fully qualified generated API references avoid conflicts with application names.
+List overloads keep the supplied list. Varargs overloads use `java.util.List.of`,
+preserving the original implementation's array adaptation and null rejection.
+Optional loads use `Optional.ofNullable`. Natural-key map inputs retain named
+attribute interpretation, including compound keys and natural-id classes.
+A single `using(String,Object)` uses a singleton map, which permits null values.
+
+== Loading options and preserved defaults
+
+Supported loading options include non-null cache modes, lock modes and scopes, Timeout
+factory calls, read-only controls, natural-id synchronization, session checking,
+ordered return, return of deleted entities, and positive literal batch sizes.
+Boolean controls become enum constants or conditional expressions. A setting may
+appear once in a chain. Nested `FindMultipleOption` types are generated directly;
+the individual recipe does not depend on option-relocation recipes having run.
+
+Explicit options preserve legacy defaults where the replacement differs:
+
+* Multi-identifier loading disables session checking and uses read-write mode by
+  default, including when the session default is read-only.
+* Multi-natural-id loading keeps session checking and synchronization enabled and
+  inherits the session's read-only setting.
+* Generated find calls specify the legacy lock-mode baseline. Explicit locking
+  also preserves the legacy scope, timeout, and follow-on defaults.
+
+The recipe evaluates each retained expression once. It skips chains when moving
+options after a key might change evaluation order, or delay copying a mutable
+natural-key map past an effectful option expression.
+
+== Manual review
+
+The entire candidate remains unchanged and receives a `SkippedMigrations` row for:
+
+* Every `getReference` terminal. 8.0's new natural-id references throw when the
+  legacy call returns null and omit legacy synchronization. Eager identifier references
+  also differ in their inherited read-only behavior; ordinary lazy proxies may
+  still inherit the session setting.
+* String entity names, stored or escaped builders, aliases, and method references.
+* Graph options, mutable `LockOptions`, fetch profiles, repeated settings, and
+  dynamic or nonpositive batch sizes.
+* Multiple `using` calls or metamodel attribute forms. One existing compound-key
+  map is supported; the recipe does not build compound maps from multiple setters.
+* Missing attribution, application overrides, unsafe evaluation order, nullable
+  options without proven non-nullness, package-name conflicts, or comments on
+  discarded chain segments that cannot be preserved safely.
+
+Supply the source Hibernate API for attribution. Unsupported candidates are
+atomic: other independent chains in the same file may still migrate.
+No source markers or review comments are inserted.
+
+The behavior guarantee covers valid mapped entities, valid keys, normal loading,
+missing results, and supported options. ORM's replacement entry points retain
+their own validation and exception conversion for invalid keys/mappings, closed
+sessions, and database failures. External Session implementations require review.
+Neither database configuration nor entity mappings are changed.
+
+See link:../../../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations].

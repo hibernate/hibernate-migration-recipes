@@ -113,6 +113,14 @@ exact output assertions, recipe discovery, diagnostics, and fresh-parser idempot
 across the supported build formats. These checks do not execute target Hibernate
 tooling; the chosen tooling release must expose `enableClientEnhancement`.
 
+Fluent loading migration checks all five leaf recipes, exact unchanged unsupported
+candidates, original-position diagnostics, composite selection, and source/target
+compilation with fresh-target idempotence. Generated load-access runtime fixtures
+are compared with their original source on ORM 7.4.11.Final in isolated provider
+classloaders, using H2 2.5.252. Checks cover missing/optional results, compound
+natural-key maps, synchronization, bulk session checking and removal handling,
+read-only defaults, cache restoration, locking, SQL batching, and evaluation order.
+
 == Current build convention: Hibernate ORM
 
 The testing model above applies across projects, but the current convention implements ORM environments specifically. It resolves Hibernate Core, verifies ORM/JPA dependency identities, and requires a database dependency. Adding another Hibernate project requires extending this build support; a different migration name alone does not provide that support.

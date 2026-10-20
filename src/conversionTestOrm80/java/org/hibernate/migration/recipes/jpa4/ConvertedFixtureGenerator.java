@@ -29,6 +29,14 @@ public final class ConvertedFixtureGenerator {
                 recipe = ApiValidation.composite(entry.recipe());
                 sources = MigrationSources.configured().files("fixture/sqlverification/RuntimeEntities.java");
             }
+            else if (entry.fixture().equals("loadAccessReferences")) {
+                recipe = ApiValidation.composite(entry.recipe());
+                sources = MigrationSources.configured().files("fixture/loadaccess/ReferenceContracts.java");
+            }
+            else if (entry.fixture().equals("loadAccess")) {
+                recipe = ApiValidation.composite(entry.recipe());
+                sources = MigrationSources.configured().files("fixture/loadaccess/RuntimeLoads.java");
+            }
             else if (entry.fixture().equals("optimistic")) {
                 recipe = ApiValidation.composite(entry.recipe());
                 sources = MigrationSources.configured().files("fixture/optimistic/RuntimeEntity.java");
@@ -42,7 +50,14 @@ public final class ConvertedFixtureGenerator {
             }
             else throw new IllegalArgumentException("Unknown fixture " + entry.fixture());
             var result = ApiValidation.run(recipe, sources, environments.context(entry.variant()));
-            if (!result.skipped().isEmpty()) throw new IllegalStateException("Unexpected skips for " + entry.id());
+            if (entry.fixture().equals("loadAccessReferences")) {
+                var reasons = result.skipped().stream().map(row -> row.getReasonCode()).sorted().toList();
+                if (!reasons.equals(java.util.List.of("LOAD_ACCESS_IDENTIFIER_REFERENCE", "LOAD_ACCESS_IDENTIFIER_REFERENCE",
+                        "LOAD_ACCESS_NATURAL_REFERENCE", "LOAD_ACCESS_NATURAL_REFERENCE"))) {
+                    throw new IllegalStateException("Unexpected reference skips for " + entry.id() + ": " + reasons);
+                }
+            }
+            else if (!result.skipped().isEmpty()) throw new IllegalStateException("Unexpected skips for " + entry.id());
             return result.files();
         });
     }
