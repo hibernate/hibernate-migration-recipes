@@ -79,7 +79,7 @@ tasks.withType<PublishToMavenRepository>().configureEach {
     dependsOn(cleanReleaseStaging)
 }
 
-val rewriteBomVersion = "3.37.0"
+val rewriteBomVersion = "3.38.0"
 val junitVersion = "6.1.3"
 
 dependencies {
