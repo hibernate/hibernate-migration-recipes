@@ -50,7 +50,7 @@ class MappingXmlCommentsTest {
             assertTrue(result.rows().isEmpty());
             assertFalse(result.text().contains(" comment="));
             var parsed = parse(result.text().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            assertEquals(value.getValue(), parsed.getElementsByTagNameNS(NS, "comment").item(0).getTextContent());
+            assertEquals(value.getValue(), parsed.getElementsByTagNameNS(NS.replace("http:", "https:"), "comment").item(0).getTextContent());
             validate(result.text(), schemaPath("8.0"));
         }
     }
@@ -84,7 +84,7 @@ class MappingXmlCommentsTest {
         for (String child : List.of("<comment>   </comment>", "<comment> <!--keep-->  </comment>", "<comment><![CDATA[   ]]></comment>")) {
             String input = root("8.0", "<entity class='demo.Book'><table comment='   '>" + child + "</table></entity>");
             var result = run(new MigrateMappingXml(), input);
-            assertEquals(input.replace(" comment='   '", ""), result.text());
+            assertEquals(input.replace(" comment='   '", "").replace(NS, NS.replace("http:", "https:")), result.text());
             assertTrue(result.rows().isEmpty());
         }
     }
@@ -93,7 +93,7 @@ class MappingXmlCommentsTest {
         String body = "<table comment='root is invalid'/><entity class='demo.Book'><unknown><table comment='nested'/></unknown><table xmlns='urn:foreign' comment='foreign'/><table xmlns:f='urn:foreign' f:comment='foreign attribute'/><table xmlns='urn:foreign'><column xmlns='" + NS + "' comment='rebound'/></table></entity>";
         String input = root("8.0", body);
         var result = run(new MigrateMappingXml(), input);
-        assertEquals(input, result.text());
+        assertEquals(input.replace(NS, NS.replace("http:", "https:")), result.text());
         assertTrue(result.rows().isEmpty());
         for (String version : List.of("3.1.0", "9.0")) {
             input = root(version, "<entity class='demo.Book'><table comment='keep'/></entity>");

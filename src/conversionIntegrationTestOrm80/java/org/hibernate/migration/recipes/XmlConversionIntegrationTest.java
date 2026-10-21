@@ -60,6 +60,15 @@ class XmlConversionIntegrationTest {
     }
 
     @Test void migratedCommentsReachHibernateMappingMetadata() throws Exception {
+        var environments = ValidationEnvironment.configured();
+        try (var jar = new java.util.zip.ZipFile(environments.value(environments.primary().target() + ".ormJar"))) {
+            try (var stream = jar.getInputStream(jar.getEntry("org/hibernate/xsd/mapping/mapping-8.0.xsd"))) {
+                org.junit.jupiter.api.Assumptions.assumeTrue(
+                        new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                                .contains("targetNamespace=\"https://www.hibernate.org/xsd/orm/mapping\""),
+                        "Mapping HTTPS bootstrap requires ORM 8.0.0.Beta4 or later (HHH-20959)");
+            }
+        }
         fixture("mapping-xml");
         try (var loader = new URLClassLoader(new java.net.URL[]{classes.toUri().toURL()}, getClass().getClassLoader())) {
             var bootstrap = new BootstrapServiceRegistryBuilder().applyClassLoader(loader).build();

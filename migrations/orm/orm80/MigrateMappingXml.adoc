@@ -9,6 +9,7 @@ Recipe name is `org.hibernate.migration.recipes.orm80.MigrateMappingXml`.
 Migrates Hibernate's `mapping.xml` files:
 
 * updates version to 8.0
+* converts Hibernate mapping namespace declarations and matching schema-location pairs to HTTPS
 * migrates legacy table and column comment attributes to elements
 * removes ignored many-to-many orphan-removal
 
@@ -17,7 +18,18 @@ See link:xml-descriptors.adoc[shared XML descriptor behavior] for shared eligibi
 == Conversions
 
 Canonical HTTP schema URLs are upgraded to HTTPS, including in version 8.0
-documents. The namespace remains `http://www.hibernate.org/xsd/orm/mapping`.
+documents. Both HTTP and HTTPS mapping namespaces are accepted for versions
+7.0 and 8.0. Default and prefixed namespace declarations, including nested
+redeclarations and unused aliases, are converted to
+`https://www.hibernate.org/xsd/orm/mapping`. Prefix names and foreign namespaces
+are preserved; ordinary attribute values, text, and comments are not rewritten.
+
+A matching `xsi:schemaLocation` pair is converted to the HTTPS namespace and
+`https://www.hibernate.org/xsd/orm/mapping/mapping-8.0.xsd`. HTTP and HTTPS
+namespace forms identify the same schema family; declaring a pair for each is
+a conflict. Missing pairs are not added, and unrelated pairs and whitespace
+are preserved. Namespace conversion is atomic with version, schema, and content
+changes.
 
 === Comment attributes
 
@@ -46,7 +58,7 @@ The attribute remains on `<one-to-many>` and `<one-to-one>`, where it is support
 
 == Supported inputs
 
-An `entity-mappings` root in the Hibernate mapping namespace, with version 7.0
+An `entity-mappings` root in either the HTTP or HTTPS Hibernate mapping namespace, with version 7.0
 or 8.0. Custom filenames and namespace prefixes are supported.
 
 Comment conversion applies to schema-defined uses of `table`, `secondary-table`, `collection-table`, `join-table`, `table-generator`, `column`, and `join-column` types, including aliases such as `inverse-join-column`. Matching includes the enclosing schema context and namespaces.
@@ -56,4 +68,4 @@ Comment conversion applies to schema-defined uses of `table`, `secondary-table`,
 JPA mapping comments and arbitrary elements with the same local names are not
 converted.
 
-Different values, multiple existing comment children, duplicate comment attributes, and unresolved entity values remain unchanged with `XML_COMMENT_CONFLICT` diagnostics. Any such conflict leaves the entire document unchanged, including its version and schema reference. The recipe also handles version 8.0 documents containing legacy comment attributes.
+Different values, multiple existing comment children, duplicate comment attributes, and unresolved entity values remain unchanged with `XML_COMMENT_CONFLICT` diagnostics. Any such conflict leaves the entire document unchanged, including its namespace declarations, version, and schema reference. The recipe also handles version 8.0 documents containing legacy comment attributes.

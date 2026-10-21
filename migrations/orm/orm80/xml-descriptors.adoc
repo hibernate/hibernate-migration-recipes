@@ -26,13 +26,13 @@ Unrelated XML is ignored.
 |link:MigrateOrmXml.adoc[MigrateOrmXml]
 
 |Hibernate entity mappings
-|`http://www.hibernate.org/xsd/orm/mapping`
+|`http://www.hibernate.org/xsd/orm/mapping` or `https://www.hibernate.org/xsd/orm/mapping`
 | <entity-mappings/>
-|7.0 -> 8.0
+|7.0, 8.0 -> 8.0 (HTTPS namespace)
 |link:MigrateMappingXml.adoc[MigrateMappingXml]
 |===
 
-Each recipe updates its document’s content together with the root `version` and the matching canonical `xsi:schemaLocation` pair when present. Missing schema locations are not added. Unrelated schema pairs and formatting are preserved. Hibernate schema locations may use HTTP or HTTPS; canonical HTTP schema URLs are upgraded to HTTPS, including in documents already marked as version 8.0.
+Each recipe updates its document’s content together with the root `version` and the matching canonical `xsi:schemaLocation` pair when present. Missing schema locations are not added. Unrelated schema pairs and formatting are preserved. Hibernate schema locations may use HTTP or HTTPS; canonical HTTP schema URLs are upgraded to HTTPS, including in documents already marked as version 8.0. Hibernate mapping namespace declarations and matching schema-pair namespace tokens are also upgraded to HTTPS. Both HTTP and HTTPS pair namespaces identify the mapping family; multiple matching pairs are rejected.
 
 == Manual review
 

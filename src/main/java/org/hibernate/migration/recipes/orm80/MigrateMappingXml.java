@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.*;
 
-/// Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments, ignored many-to-many orphan removal, and canonical schema references.
+/// Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments, ignored many-to-many orphan removal, and HTTPS mapping namespaces and schema references.
 ///
 /// @author Steve Ebersole
 public class MigrateMappingXml extends Recipe {
@@ -26,7 +26,7 @@ public class MigrateMappingXml extends Recipe {
 
     @Override public @NonNull String getDisplayName() { return "Migrate Hibernate mapping XML to 8.0"; }
     @Override public @NonNull String getDescription() {
-        return "Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments and canonical schema references. "
+        return "Upgrades Hibernate mapping descriptors from 7.0 to 8.0, including table and column comments and HTTPS mapping namespaces and schema references. "
                 + "Removes orphan-removal from many-to-many elements: Hibernate never processed this attribute, so removing it preserves existing behavior.";
     }
     @Override public @NonNull TreeVisitor<?, ExecutionContext> getVisitor() {
@@ -59,7 +59,7 @@ public class MigrateMappingXml extends Recipe {
                 int insertion = 0;
                 for (int i = 0; i < content.size(); i++) {
                     if (content.get(i) instanceof Xml.Tag child && PRECEDING.get(type).contains(local(child))
-                            && descriptor.namespace.equals(namespace(child, namespaces(child, scope)))) insertion = i + 1;
+                            && descriptor.acceptsNamespace(namespace(child, namespaces(child, scope)))) insertion = i + 1;
                 }
                 String prefix = result.getChildren().isEmpty() ? "" : result.getChildren().get(0).getPrefix();
                 if (result.getChildren().isEmpty() && tag.getPrefix().contains("\n")) {
@@ -88,7 +88,7 @@ public class MigrateMappingXml extends Recipe {
                 for (int i = 0; i < path.size(); i++) {
                     Xml.Tag t = path.get(i);
                     scope = namespaces(t, scope);
-                    if (!descriptor.namespace.equals(namespace(t, scope))) return null;
+                    if (!descriptor.acceptsNamespace(namespace(t, scope))) return null;
                     if (i != 0) type = CONTEXTS.getProperty(type + "/" + local(t));
                     if (type == null) return null;
                 }

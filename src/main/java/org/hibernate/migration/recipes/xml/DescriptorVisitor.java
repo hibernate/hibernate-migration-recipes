@@ -4,6 +4,7 @@ import org.hibernate.migration.recipes.table.SkippedMigrations;
 import org.jspecify.annotations.NonNull;
 import org.openrewrite.*;
 import org.openrewrite.xml.XmlIsoVisitor;
+import org.openrewrite.internal.ListUtils;
 import org.openrewrite.xml.internal.XmlPrinter;
 import org.openrewrite.xml.tree.Xml;
 
@@ -35,7 +36,7 @@ public class DescriptorVisitor extends XmlIsoVisitor<ExecutionContext> {
         Xml.Tag root = doc.getRoot();
         if (!descriptor.root.equals(local(root))) return doc;
         Map<String, String> namespaces = namespaces(root, Map.of("xml", "http://www.w3.org/XML/1998/namespace"));
-        boolean matching = descriptor.namespace.equals(namespace(root, namespaces));
+        boolean matching = descriptor.acceptsNamespace(namespace(root, namespaces));
         if (!matching && descriptor != Descriptor.PERSISTENCE) return doc;
         input = doc;
         // Keep locations from the first XML recipe, including across composite recipes and cycles.
@@ -73,7 +74,7 @@ public class DescriptorVisitor extends XmlIsoVisitor<ExecutionContext> {
             if (words.size() % 2 != 0) return reject(doc, ctx, "XML_SCHEMA_CONFLICT", "schemaLocation must contain namespace/location pairs.");
             boolean found = false;
             for (int i = 0; i < words.size(); i += 2) {
-                if (!descriptor.namespace.equals(words.get(i))) continue;
+                if (!descriptor.acceptsNamespace(words.get(i))) continue;
                 if (found) return reject(doc, ctx, "XML_SCHEMA_CONFLICT", "Duplicate " + descriptor.root + " schema pairs.");
                 found = true;
                 String expected = descriptor.schema(v);
@@ -82,20 +83,37 @@ public class DescriptorVisitor extends XmlIsoVisitor<ExecutionContext> {
                     expected = expected.replace("https:", "http:");
                 }
                 if (!expected.equals(words.get(i + 1))) return reject(doc, ctx, "XML_SCHEMA_LOCATION_UNSUPPORTED", "The schema location does not match the declared version's canonical schema.");
-                replacement = value.substring(0, starts.get(i + 1)) + target + value.substring(ends.get(i + 1));
+                replacement = value.substring(0, starts.get(i)) + descriptor.namespace
+                        + value.substring(ends.get(i), starts.get(i + 1)) + target + value.substring(ends.get(i + 1));
             }
         }
         Xml.Document migrated = super.visitDocument(doc, ctx);
         // Keep metadata and content together: a skipped candidate cancels this document's edits.
         if (contentSkipped) return doc;
-        if (descriptor.target.equals(v) && (replacement == null || replacement.equals(schema.getValueAsString()))) return migrated;
-        List<Xml.Attribute> attributes = new ArrayList<>();
-        for (Xml.Attribute a : root.getAttributes()) {
-            if (a == version) attributes.add(a.withValue(a.getValue().withValue(descriptor.target)));
-            else if (a == schema && replacement != null) attributes.add(a.withValue(a.getValue().withValue(replacement)));
-            else attributes.add(a);
+
+        if (!descriptor.target.equals(v) || (replacement != null && !replacement.equals(schema.getValueAsString()))) {
+            List<Xml.Attribute> attributes = new ArrayList<>();
+            for (Xml.Attribute a : root.getAttributes()) {
+                if (a == version) attributes.add(a.withValue(a.getValue().withValue(descriptor.target)));
+                else if (a == schema && replacement != null) attributes.add(a.withValue(a.getValue().withValue(replacement)));
+                else attributes.add(a);
+            }
+            migrated = migrated.withRoot(migrated.getRoot().withAttributes(attributes));
         }
-        return migrated.withRoot(migrated.getRoot().withAttributes(attributes));
+        if (descriptor.sourceNamespaces.size() == 1) return migrated;
+        // Rewrite bindings only after content matching has finished against the original scopes.
+        return (Xml.Document) new XmlIsoVisitor<ExecutionContext>() {
+            @Override public Xml.@NonNull Tag visitTag(Xml.@NonNull Tag tag, @NonNull ExecutionContext context) {
+                Xml.Tag result = super.visitTag(tag, context);
+                return result.withAttributes(ListUtils.map(result.getAttributes(), a -> {
+                    String key = a.getKeyAsString();
+                    return (key.equals("xmlns") || key.startsWith("xmlns:"))
+                            && descriptor.acceptsNamespace(a.getValueAsString())
+                            && !descriptor.namespace.equals(a.getValueAsString())
+                            ? a.withValue(a.getValue().withValue(descriptor.namespace)) : a;
+                }));
+            }
+        }.visitNonNull(migrated, ctx);
     }
 
     private Xml.Document reject(Xml.Document doc, ExecutionContext ctx, String reason, String message) {
@@ -173,6 +191,6 @@ public class DescriptorVisitor extends XmlIsoVisitor<ExecutionContext> {
     }
 
     protected boolean matches(Xml.Tag tag, Map<String, String> parentScope, String name) {
-        return name.equals(local(tag)) && descriptor.namespace.equals(namespace(tag, namespaces(tag, parentScope)));
+        return name.equals(local(tag)) && descriptor.acceptsNamespace(namespace(tag, namespaces(tag, parentScope)));
     }
 }

@@ -22,7 +22,7 @@ class MappingXmlOrphanRemovalTest {
                 validate(input, schema("7.0"));
                 for (Recipe recipe : List.of(new MigrateMappingXml(), composite("orm80"))) {
                     var result = run(recipe, input);
-                    assertEquals(input.replace("version='7.0'", "version='8.0'")
+                    assertEquals(input.replace(NS, NS.replace("http:", "https:")).replace("version='7.0'", "version='8.0'")
                             .replace("<m:many-to-many name='related' orphan-removal='" + value + "'/>", "<m:many-to-many name='related'/>"), result.text());
                     assertTrue(result.rows().isEmpty());
                     validate(result.text(), schema("8.0"));
@@ -54,7 +54,7 @@ class MappingXmlOrphanRemovalTest {
                 + "<m:many-to-many xmlns:m='urn:foreign' name='other' orphan-removal='true'/>"
                 + "<m:unknown><m:many-to-many orphan-removal='true'/></m:unknown>"
                 + "</m:attributes></m:entity>");
-        assertEquals(input, run(new MigrateMappingXml(), input).text());
+        assertEquals(input.replace(NS, NS.replace("http:", "https:")), run(new MigrateMappingXml(), input).text());
         String jpa = input.replace(NS, "https://jakarta.ee/xml/ns/persistence/orm").replace("version='8.0'", "version='4.0'");
         assertEquals(jpa, run(new MigrateMappingXml(), jpa).text());
         assertEquals(jpa, run(composite("orm80"), jpa).text());
