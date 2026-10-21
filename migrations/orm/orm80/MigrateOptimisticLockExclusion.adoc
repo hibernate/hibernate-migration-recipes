@@ -36,6 +36,6 @@ annotations are also retained. `SkippedMigrations` reports these cases using
 `OPTIMISTIC_LOCK_VALUE_UNSUPPORTED`, `UNSUPPORTED_ANNOTATION_SHAPE`, or
 `MISSING_TYPE_ATTRIBUTION` at original leaf-input coordinates.
 
-XML optimistic-lock migration is deferred pending
-https://github.com/hibernate/hibernate-migration-recipes/issues/39[issue #39] and
-https://github.com/jakartaee/persistence/issues/1190[JPA issue #1190].
+Hibernate XML exclusions are migrated by link:MigrateMappingXml.adoc[`MigrateMappingXml`],
+which is included in the ORM composites. Explicit XML inclusion remains supported
+and is retained to preserve overrides of annotation defaults.

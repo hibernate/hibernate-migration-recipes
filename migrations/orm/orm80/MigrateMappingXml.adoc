@@ -12,6 +12,7 @@ Migrates Hibernate's `mapping.xml` files:
 * converts Hibernate mapping namespace declarations and matching schema-location pairs to HTTPS
 * migrates legacy table and column comment attributes to elements
 * removes ignored many-to-many orphan-removal
+* migrates versioning exclusions to nested `exclude-from-versioning` elements
 
 See link:xml-descriptors.adoc[shared XML descriptor behavior] for shared eligibility and schema metadata rules.
 
@@ -55,6 +56,24 @@ child has the same semantic value, only the redundant attribute is removed.
 `org.hibernate.migration.recipes.orm80.MigrateMappingXml` removes the unqualified `orphan-removal` attribute from schema-defined `<many-to-many>` elements. Hibernate never processed this attribute, so removing it preserves existing behavior. Both `true` and `false` values are removed, including in documents already marked as version 8.0.
 
 The attribute remains on `<one-to-many>` and `<one-to-one>`, where it is supported. Foreign-namespace attributes, unrelated XML contexts, and JPA entity-mapping documents are unaffected. Removal is part of the same document migration as version and comment changes; a conflict elsewhere leaves the entire document unchanged.
+
+=== Versioning exclusions
+
+Unqualified `optimistic-lock="false"` (or `"0"`) on basic, embedded,
+element-collection, to-one, to-many, any, and many-to-any mappings becomes a nested
+`<exclude-from-versioning/>`. Explicit `true` and `1` remain unchanged because
+inclusion can override annotation defaults. Omitted attributes are not changed.
+
+Legacy `<excluded-from-versioning name="title"/>` entries under `<attributes>`
+move into the uniquely named supported mapping as `<exclude-from-versioning/>`.
+Existing nested exclusions are reused. The new child precedes `mutable` and
+`on-delete` where required by the target schema. Comments are preserved.
+
+Missing, ambiguous, or unsupported named targets, extra legacy-element data, and
+invalid boolean values produce `XML_VERSIONING_EXCLUSION_UNRESOLVED`.
+Explicit inclusion combined with exclusion, or duplicate nested exclusions,
+produces `XML_VERSIONING_EXCLUSION_CONFLICT`. These diagnostics leave the entire
+document unchanged. Foreign namespaces and unrelated paths are unaffected.
 
 == Supported inputs
 
