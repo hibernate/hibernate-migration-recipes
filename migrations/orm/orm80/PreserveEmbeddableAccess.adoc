@@ -1,0 +1,87 @@
+= Preserve embeddable access
+
+Recipe: `org.hibernate.migration.recipes.orm80.PreserveEmbeddableAccess`
+
+Included in `orm80-required` and `orm80`.
+
+HHH-13537 and HHH-21017 correct access inheritance for embeddables in ORM 8.0, starting with Beta4.
+An embedding attribute's `@Access` controls that attribute; the embeddable inherits access from its containing class unless it declares its own access.
+Previously, a singular embedding could pass its attribute override into the embeddable. Collection elements and independently mapped embeddable map keys used the collection override, or otherwise the owning entity's identifier accessor.
+
+This recipe adds explicit access on an embeddable when its previous access can be established and preserved consistently across all supplied uses.
+For example:
+
+[source,java]
+.Before
+----
+@Entity
+@Access(AccessType.PROPERTY)
+class Owner {
+    @Id
+    @Access(AccessType.FIELD)
+    long id;
+
+    @ElementCollection
+    public List<Detail> getDetails() { /* ... */ }
+}
+
+@Embeddable
+class Detail {
+    String description;
+}
+----
+
+[source,java]
+.After (embeddable declaration)
+----
+@jakarta.persistence.Access(jakarta.persistence.AccessType.FIELD)
+@Embeddable
+class Detail {
+    String description;
+}
+----
+
+The identifier's FIELD override previously determined collection-element access. Explicit FIELD access preserves that behavior after the correction.
+The recipe leaves the owner's identifier and embedding annotations intact.
+Generated annotation references are qualified to avoid collisions with application `Access` and `AccessType` names.
+
+== Scope and review
+
+Supply the complete persistence model: entities, mapped superclasses, embeddables, and mapping descriptors.
+Uses and XML overrides outside the supplied input cannot be established.
+The recipe analyzes all known occurrences before editing a shared embeddable. If different occurrences require different legacy access, it leaves the type unchanged and reports the conflict.
+It also checks nested mappings before editing a parent; an unsupported or conflicting child can block that parent's migration.
+Existing explicit embeddable access is retained, and redundant nested annotations are avoided.
+
+Supported cases include ordinary FIELD/PROPERTY mappings, inherited identifiers and mapped-superclass declarations, singular embeddings and ordinary embedded identifiers, element collections, independently mapped embeddable map keys, and concrete collection/map target types.
+Mixed identifier-mapper access, unresolved types or hierarchy metadata, custom mapping/instantiation mechanisms, records, embeddable inheritance, derived identifiers, and unresolved nested map-key binder contexts require review.
+XML-dependent mappings are reported without editing their descriptors. Missing referenced descriptors and unscoped XML defaults can block all potentially affected candidates.
+
+Review the `Skipped Hibernate migrations` table:
+
+[cols="2,3",options="header"]
+|===
+|Reason code |Meaning
+|`EMBEDDABLE_ACCESS_CONFLICT` |Known occurrences require different legacy access values.
+|`EMBEDDABLE_ACCESS_UNRESOLVED` |Required type, hierarchy, identifier, generic, or binder information cannot be resolved.
+|`EMBEDDABLE_ACCESS_XML_DEPENDENT` |XML mapping information prevents annotation-only preservation.
+|`EMBEDDABLE_ACCESS_UNSUPPORTED` |A custom or unsupported mapping affects access.
+|`EMBEDDABLE_ACCESS_DEPENDENCY` |A dependent embedding cannot be preserved consistently.
+|===
+
+Reports identify the embedding declaration, embeddable type, and mapping path. They distinguish known legacy and target access where available.
+See link:../../../README.adoc#_reviewing_skipped_migrations[reviewing skipped migrations].
+
+== Verifying an unreleased corrected provider
+
+The project's default target remains the configured published version. The corrected-target runtime test explicitly skips if that target predates the corrections; the legacy runtime test still runs.
+To verify a local ORM build before Beta4 is available, provide its complete runtime classpath (including its dependencies) using `-PembeddableAccessTargetClasspath=...`, or put that classpath in a UTF-8 file and use `-PembeddableAccessTargetClasspathFile=/absolute/path/to/classpath.txt`:
+
+[source,shell]
+----
+./gradlew conversionTestOrm80 --tests '*EmbeddableAccess*' \
+    -PembeddableAccessTargetClasspathFile=/absolute/path/to/classpath.txt
+----
+
+This override affects only the isolated corrected-provider runtime test; it does not change published recipe coordinates or the configured compilation/conversion environments.
+The runtime test compares unmodified legacy mappings, unmodified corrected-target mappings, and actual migrated output. It checks metadata accessors and database round trips with distinguishable field/getter state.
