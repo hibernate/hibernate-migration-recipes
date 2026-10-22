@@ -75,6 +75,7 @@ All recipes below are included in `orm80` and can also be selected independently
 [cols="3,1,1",options="header"]
 |===
 |Recipe |`orm80` |`orm80-required`
+|link:PreserveEmbeddableAccess.adoc[`PreserveEmbeddableAccess`] |Yes |Yes
 |link:MigrateNamedQueryToStatement.adoc[`MigrateNamedQueryToStatement`] |Yes |Yes
 |link:MigratePersistenceXml.adoc[`MigratePersistenceXml`] |Yes |Yes
 |link:MigrateOrmXml.adoc[`MigrateOrmXml`] |Yes |No

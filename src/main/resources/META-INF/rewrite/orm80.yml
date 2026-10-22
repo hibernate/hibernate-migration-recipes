@@ -26,6 +26,7 @@ description: >-
   platform adoption. Unsupported usages may require manual migration; this recipe
   does not guarantee a complete upgrade.
 recipeList:
+  - org.hibernate.migration.recipes.orm80.PreserveEmbeddableAccess
   - org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement
   - org.hibernate.migration.recipes.jpa4.MigratePersistenceXml
   - org.hibernate.migration.recipes.orm80.MigrateMappingXml

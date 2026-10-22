@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("java")
     id("maven-publish")
@@ -174,6 +176,7 @@ val prepareCoordinateMaven = tasks.register<Sync>("prepareCoordinateMaven") {
     into(layout.buildDirectory.dir("coordinate-tools/maven"))
 }
 afterEvaluate {
+    dependencies.add("conversionTestOrm80RuntimeOnly", "com.h2database:h2:2.5.252")
     val fixtureDirectory = layout.buildDirectory.dir("converted-build-fixtures/orm80")
     val executionDirectory = layout.buildDirectory.dir("build-tool-tests/orm80")
     val conversionSuite = sourceSets.getByName("conversionTestOrm80")
@@ -191,6 +194,15 @@ afterEvaluate {
         doFirst { fixtureCleaner.fileSystemOperations.delete { delete(fixtureDirectory) } }
     }
     tasks.named<Test>("conversionTestOrm80") {
+        providers.gradleProperty("embeddableAccessTargetClasspathFile").orNull?.let {
+            inputs.file(it)
+            inputs.files(file(it).readText().trim().split(File.pathSeparator))
+            systemProperty("embeddableAccess.targetClasspathFile", file(it).absolutePath)
+        }
+        providers.gradleProperty("embeddableAccessTargetClasspath").orNull?.let {
+            inputs.files(it.split(File.pathSeparator))
+            systemProperty("embeddableAccess.targetClasspath", it)
+        }
         maxParallelForks = 2
         exclude("**/OrmCoordinateResolutionTest.class", "**/OrmCoordinateResourceTest.class")
     }

@@ -49,7 +49,7 @@ class RecipeArtifactTest {
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
                 assertFalse(names.contains("org.hibernate.migration.recipes." + simple));
             }
-            for (String simple : List.of("MigrateLoadAccess", "MigrateById", "MigrateByMultipleIds", "MigrateByNaturalId", "MigrateBySimpleNaturalId", "MigrateByMultipleNaturalId", "MigrateMappingXml", "MigrateOptimisticLockExclusion", "MigrateSqlResultVerification", "MigrateQueryFlushMode", "MigrateQueryHints", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption", "MigrateOrmCoordinates", "MigrateGradleOrmCoordinates", "MigrateMavenOrmCoordinates", "MigrateAntOrmCoordinates")) {
+            for (String simple : List.of("PreserveEmbeddableAccess", "MigrateLoadAccess", "MigrateById", "MigrateByMultipleIds", "MigrateByNaturalId", "MigrateBySimpleNaturalId", "MigrateByMultipleNaturalId", "MigrateMappingXml", "MigrateOptimisticLockExclusion", "MigrateSqlResultVerification", "MigrateQueryFlushMode", "MigrateQueryHints", "MigrateFindMultipleOptions", "MigrateClientEnhancementOption", "MigrateGradleClientEnhancementOption", "MigrateMavenClientEnhancementOption", "MigrateAntClientEnhancementOption", "MigrateOrmCoordinates", "MigrateGradleOrmCoordinates", "MigrateMavenOrmCoordinates", "MigrateAntOrmCoordinates")) {
                 String name = "org.hibernate.migration.recipes.orm80." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
@@ -65,6 +65,7 @@ class RecipeArtifactTest {
             assertFalse(names.contains("org.hibernate.migration.recipes.orm80.MigrateMappingXmlComments"));
             assertFalse(names.contains("org.hibernate.migration.recipes.jpa4"));
             List<String> required = List.of(
+                    "org.hibernate.migration.recipes.orm80.PreserveEmbeddableAccess",
                     "org.hibernate.migration.recipes.jpa4.MigrateNamedQueryToStatement",
                     "org.hibernate.migration.recipes.jpa4.MigratePersistenceXml",
                     "org.hibernate.migration.recipes.orm80.MigrateMappingXml",
