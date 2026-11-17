@@ -28,7 +28,7 @@ name: example.MigrateOrmBuild
 displayName: Migrate ORM build coordinates
 recipeList:
   - org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates:
-      targetVersion: 8.0.0.Beta2
+      targetVersion: 8.0.0.CR1
 ----
 
 With the OpenRewrite plugin and recipe JAR configured as shown under

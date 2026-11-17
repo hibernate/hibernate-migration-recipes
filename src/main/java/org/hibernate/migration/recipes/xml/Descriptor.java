@@ -1,5 +1,6 @@
 package org.hibernate.migration.recipes.xml;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /// Internal descriptor identities shared by XML recipes; filenames are immaterial.
@@ -21,7 +22,7 @@ public enum Descriptor {
     Descriptor(String root, String namespace, String target, Set<String> versions, String... legacyNamespaces) {
         this.root = root;
         this.namespace = namespace;
-        var sources = new java.util.HashSet<>(Set.of(legacyNamespaces));
+        var sources = new HashSet<>(Set.of(legacyNamespaces));
         sources.add(namespace);
         this.sourceNamespaces = Set.copyOf(sources);
         this.target = target;

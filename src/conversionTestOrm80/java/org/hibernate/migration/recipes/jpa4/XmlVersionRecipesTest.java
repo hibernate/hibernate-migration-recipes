@@ -18,16 +18,10 @@ class XmlVersionRecipesTest {
                 for (Recipe recipe : recipes) {
                     for (String scheme : d == Descriptor.MAPPING ? List.of("https:", "http:") : List.of("https:")) {
                         String schema = d.schema(version).replace("https:", scheme);
-                        String namespace = d == Descriptor.MAPPING && (version.equals("7.0")
-                                || new String(schema(resource(d, version)), java.nio.charset.StandardCharsets.UTF_8)
-                                        .contains("targetNamespace=\"http://www.hibernate.org/xsd/orm/mapping\""))
+                        String namespace = d == Descriptor.MAPPING && version.equals("7.0")
                                 ? "http://www.hibernate.org/xsd/orm/mapping" : d.namespace;
                         String input = "<?xml version=\"1.0\"?>\r\n<!-- keep -->\r\n<p:entity-mappings xmlns:p=\"" + namespace + "\" xmlns:s=\"http://www.w3.org/2001/XMLSchema-instance\" version='" + version + "' s:schemaLocation=\"urn:other other.xsd\n  " + namespace + "\t" + schema + "  \"/>";
-                        // Early 8.0 inputs use the published HTTP schema; output uses the HTTPS contract.
-                        if (d == Descriptor.MAPPING && version.equals("8.0")) {
-                            validate(input, schema(resource(d, version)));
-                        }
-                        else validate(input, resource(d, version));
+                        validate(input, resource(d, version));
                         var result = run(recipe, input);
                         assertEquals(input.replace("version='" + version + "'", "version='" + d.target + "'").replace(schema, d.schema(d.target)).replace(namespace, d.namespace), result.text());
                         assertTrue(result.rows().isEmpty());

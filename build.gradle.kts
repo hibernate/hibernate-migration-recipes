@@ -107,7 +107,7 @@ migrationTesting {
             ormVersion.set("7.4.11.Final")
         }
         register("orm80") {
-            ormVersion.set("8.0.0.Beta2")
+            ormVersion.set("8.0.0.CR1")
         }
     }
     migrations {

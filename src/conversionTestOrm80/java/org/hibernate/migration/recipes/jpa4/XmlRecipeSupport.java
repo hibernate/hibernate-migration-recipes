@@ -50,16 +50,7 @@ public final class XmlRecipeSupport {
     }
 
     public static void validate(String xml, String resource) throws Exception {
-        byte[] bytes = schema(resource);
-        // Beta2 predates HHH-20959. Use the upstream HTTPS contract until the target ships it.
-        if (resource.equals("org/hibernate/xsd/mapping/mapping-8.0.xsd")
-                && new String(bytes, java.nio.charset.StandardCharsets.UTF_8).contains("targetNamespace=\"http://www.hibernate.org/xsd/orm/mapping\"")) {
-            try (var stream = XmlRecipeSupport.class.getResourceAsStream("/issue42/mapping-8.0.xsd")) {
-                assertNotNull(stream, "Missing upstream HTTPS mapping schema fixture");
-                bytes = stream.readAllBytes();
-            }
-        }
-        validate(xml, bytes);
+        validate(xml, schema(resource));
     }
 
     public static void validate(String xml, byte[] schema) throws Exception {
