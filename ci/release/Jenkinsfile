@@ -23,7 +23,6 @@ pipeline {
         skipDefaultCheckout()
         disableConcurrentBuilds(abortPrevious: false)
         buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '10'))
-        timestamps()
     }
     parameters {
         string(name: 'RELEASE_VERSION', defaultValue: '', trim: true,
