@@ -50,6 +50,7 @@ public final class OrmCoordinateBuildFixtures {
         for (var file : files.entrySet()) {
             Path path = root.resolve(file.getKey()); Files.createDirectories(path.getParent()); Files.writeString(path, file.getValue());
         }
+        HibernateBomBuildFixtures.generate(root, target);
         Files.writeString(root.resolve("target-version.txt"), target);
         Files.writeString(root.resolve("source-version.txt"), source);
     }

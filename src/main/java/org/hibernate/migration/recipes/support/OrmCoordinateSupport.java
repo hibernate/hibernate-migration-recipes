@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 public final class OrmCoordinateSupport {
     public static final String GROUP = "org.hibernate.orm";
     public static final String PLATFORM = "hibernate-platform";
+    public static final String BOM = "hibernate-bom";
     public static final String IDENTITY = "ORM_COORDINATE_IDENTITY_UNRESOLVED";
     public static final String ARTIFACT = "ORM_COORDINATE_ARTIFACT_UNSUPPORTED";
     public static final String CONFLICT = "ORM_COORDINATE_CONFLICT";
@@ -30,7 +31,7 @@ public final class OrmCoordinateSupport {
             "hibernate-envers", "hibernate-spatial", "hibernate-vector", "hibernate-community-dialects", "hibernate-scan-jandex",
             "hibernate-agroal", "hibernate-c3p0", "hibernate-hikaricp", "hibernate-ucp", "hibernate-jcache", "hibernate-micrometer",
             "hibernate-graalvm", "hibernate-processor", "hibernate-gradle-plugin", "hibernate-maven-plugin", "hibernate-ant",
-            "hibernate-assistant", "hibernate-reveng", "hibernate-jfr", PLATFORM);
+            "hibernate-assistant", "hibernate-reveng", "hibernate-jfr", PLATFORM, BOM);
     public static final Set<String> LEGACY = Set.of("hibernate-core", "hibernate-testing", "hibernate-envers", "hibernate-spatial",
             "hibernate-vector", "hibernate-community-dialects", "hibernate-agroal", "hibernate-c3p0", "hibernate-hikaricp",
             "hibernate-ucp", "hibernate-jcache", "hibernate-micrometer", "hibernate-graalvm", "hibernate-processor", "hibernate-ant",
@@ -73,10 +74,14 @@ public final class OrmCoordinateSupport {
 
     /// Downloads only the selected published BOM through the execution's Maven settings/repositories.
     public static Set<String> managed(String version, List<MavenRepository> repositories, ExecutionContext ctx) {
+        return managed(PLATFORM, version, repositories, ctx);
+    }
+
+    public static Set<String> managed(String bom, String version, List<MavenRepository> repositories, ExecutionContext ctx) {
         repositories = repositories.isEmpty() ? List.of(MavenRepository.MAVEN_CENTRAL) : repositories;
         final List<MavenRepository> selectedRepositories = repositories;
         var view = MavenExecutionContextView.view(ctx);
-        String key = OrmCoordinateSupport.class.getName() + ".bom:" + version + ":" + repositories.hashCode()
+        String key = OrmCoordinateSupport.class.getName() + ".bom:" + bom + ":" + version + ":" + repositories.hashCode()
                 + ":" + Objects.hash(view.getSettings(), view.getMirrors(), view.getCredentials(), view.getLocalRepository(),
                         view.getAddCentralRepository(), view.getAddLocalRepository());
         Set<String> cached = ctx.getMessage(key);
@@ -86,7 +91,7 @@ public final class OrmCoordinateSupport {
         Set<String> managed;
         try {
             var downloader = new MavenPomDownloader(ctx);
-            var pom = downloader.download(new GroupArtifactVersion(GROUP, PLATFORM, version), null, null, selectedRepositories)
+            var pom = downloader.download(new GroupArtifactVersion(GROUP, bom, version), null, null, selectedRepositories)
                     .resolve(List.of(), downloader, ctx);
             Set<String> artifacts = new HashSet<>();
             for (var dependency : pom.getDependencyManagement()) {

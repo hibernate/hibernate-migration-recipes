@@ -266,8 +266,10 @@ public class MigrateGradleOrmCoordinates extends ScanningRecipe<MigrateGradleOrm
             if (reason != null) { report(this, skipped, catalog.source, offset, entry.group() + ":" + entry.artifact(), reason,
                     "Resolve this catalog declaration manually before migration.", ctx); continue; }
             String old = CoordinateSourceEdits.printed(catalog.source, entry.tree()); String updated = old;
+            // Already canonical, versionless libraries may be managed by a separately selected BOM recipe.
+            boolean preserveMissingVersion = !plugin && GROUP.equals(entry.group()) && artifact.equals(entry.artifact()) && entry.version().isEmpty();
             if (entry.tree().getValue() instanceof Toml.Literal) {
-                updated = replacePart(old, CoordinateSourceEdits.printed(catalog.source, entry.tree().getValue()), quote(CoordinateSourceEdits.printed(catalog.source, entry.tree().getValue()), GROUP + ":" + artifact + ":" + targetVersion));
+                updated = replacePart(old, CoordinateSourceEdits.printed(catalog.source, entry.tree().getValue()), quote(CoordinateSourceEdits.printed(catalog.source, entry.tree().getValue()), GROUP + ":" + artifact + (preserveMissingVersion ? "" : ":" + targetVersion)));
             }
             else {
                 for (String field : List.of("module", "group", "name")) if (entry.fields().containsKey(field) && !plugin) {
@@ -275,7 +277,7 @@ public class MigrateGradleOrmCoordinates extends ScanningRecipe<MigrateGradleOrm
                     String replacement = field.equals("module") ? GROUP + ":" + artifact : field.equals("group") ? GROUP : artifact;
                     updated = replacePart(updated, CoordinateSourceEdits.printed(catalog.source, value), quote(CoordinateSourceEdits.printed(catalog.source, value), replacement));
                 }
-                if (entry.reference().isEmpty() || !safeReferences.containsKey(entry.reference())) {
+                if (!preserveMissingVersion && (entry.reference().isEmpty() || !safeReferences.containsKey(entry.reference()))) {
                     String field = entry.fields().containsKey("version.ref") ? "version.ref" : "version";
                     if (entry.fields().containsKey(field)) {
                         var member = entry.fields().get(field);
