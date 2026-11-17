@@ -11,4 +11,5 @@ Migration recipes and guides for Hibernate ORM.
 These migrations are selected separately from the version migration composites:
 
 * link:adopt-hibernate-platform.adoc[Adopt Hibernate Platform]
+* link:adopt-hibernate-bom.adoc[Adopt Hibernate ORM BOM]
 * link:temporal-annotation.adoc[Modernize @Temporal mappings]

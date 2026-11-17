@@ -211,7 +211,7 @@ public final class GradleCoordinateInspection {
         return result;
     }
     public static String role(String configuration, String artifact, boolean platform, List<J.MethodInvocation> parents) {
-        return platform || PLATFORM.equals(artifact) ? "platform" : configuration.contains("annotationProcessor") || configuration.contains("AnnotationProcessor")
+        return platform || PLATFORM.equals(artifact) || BOM.equals(artifact) ? "platform" : configuration.contains("annotationProcessor") || configuration.contains("AnnotationProcessor")
                 || configuration.equals("classpath") || TOOLING.contains(artifact) || artifact.equals("hibernate-jpamodelgen") ? "tooling"
                 : parents.stream().anyMatch(m -> m.getSimpleName().equals("constraints")) ? "constraint" : "library";
     }

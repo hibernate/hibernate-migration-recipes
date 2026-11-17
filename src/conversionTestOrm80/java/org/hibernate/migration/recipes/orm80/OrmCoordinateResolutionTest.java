@@ -40,6 +40,25 @@ class OrmCoordinateResolutionTest {
             assertTrue(catalog.contains("orm = [\"entity\", \"core\", \"envers\", \"logging\"]"), catalog);
         }
     }
+    @ParameterizedTest @ValueSource(strings = {"bom-groovy", "bom-kotlin", "bom-maven"})
+    void ormOnlyBomRetainsApplicationManagement(String fixture) throws Exception {
+        Path directory = root().resolve(fixture);
+        String output;
+        if (fixture.equals("bom-maven")) {
+            String executable = Path.of(System.getProperty("coordinate.mavenHome"), "bin", "mvn").toString();
+            output = execute(directory, List.of("sh", executable, "-B", "-ntp",
+                    "-Dmaven.repo.local=" + root().resolveSibling("resolver-cache/maven"),
+                    "org.apache.maven.plugins:maven-dependency-plugin:3.8.1:resolve"));
+            assertTrue(output.contains("org.hibernate.orm:hibernate-core:jar:" + target()), output);
+            assertTrue(output.contains("org.junit.jupiter:junit-jupiter-api:jar:6.1.3"), output);
+        }
+        else {
+            output = execute(directory, gradle(directory));
+            assertTrue(output.contains("SELECTED:org.hibernate.orm:hibernate-core:" + target()), output);
+            assertTrue(output.contains("SELECTED:org.junit.jupiter:junit-jupiter-api:6.1.3"), output);
+        }
+    }
+
     @Test void ordinaryPlatformRespectsExistingForce() throws Exception {
         Path directory = root().resolve("forced-groovy");
         String output = execute(directory, gradle(directory));
@@ -71,10 +90,10 @@ class OrmCoordinateResolutionTest {
     @Test void ivy() throws Exception {
         Path directory = root().resolve("ivy");
         execute(directory, ant(directory));
-        List<Path> reports;
-        try (var paths = Files.list(work(directory).resolve("report"))) { reports = paths.filter(p -> p.toString().endsWith(".xml")).toList(); }
-        assertFalse(reports.isEmpty());
-        String report = Files.readString(reports.get(0));
+        // Ivy's report task may export only HTML; use this resolution's canonical XML report.
+        Path reportFile = root().resolveSibling("resolver-cache/ivy/cache/example-coordinate-fixture-default.xml");
+        assertTrue(Files.exists(reportFile));
+        String report = Files.readString(reportFile);
         for (String artifact : List.of("hibernate-core", "hibernate-envers", "hibernate-processor")) {
             assertTrue(report.contains("name=\"" + artifact + "\"") && report.contains("organisation=\"org.hibernate.orm\""), report);
         }

@@ -1,0 +1,126 @@
+= Adopt Hibernate ORM BOM
+
+link:index.adoc[Hibernate ORM migrations]
+
+Select `org.hibernate.migration.recipes.platform.AdoptHibernateBom` to import
+`org.hibernate.orm:hibernate-bom`. This BOM manages ORM modules without importing
+third-party dependency versions. Existing application platforms and explicit
+third-party versions remain intact.
+
+The recipe is optional: neither `orm80` nor `orm80-required` selects it.
+Run it after `MigrateOrmCoordinates`, or on builds already using canonical
+`org.hibernate.orm` coordinates. It does not replace `hibernate-platform`.
+
+== Selecting and configuring the recipe
+
+With the OpenRewrite Gradle plugin and this project's recipe JAR configured:
+
+[source,groovy]
+----
+rewrite {
+    activeRecipe("org.hibernate.migration.recipes.orm80")
+    activeRecipe("org.hibernate.migration.recipes.platform.AdoptHibernateBom")
+    exportDatatables = true
+}
+----
+
+Omit the first active recipe for standalone BOM adoption.
+Preview with `./gradlew rewriteDryRun`, then apply with `./gradlew rewriteRun`.
+
+The optional `targetVersion` defaults to the exact ORM 8.0 release this recipe
+JAR was built against. To configure another published release in `rewrite.yml`:
+
+[source,yaml]
+----
+type: specs.openrewrite.org/v1beta/recipe
+name: com.example.AdoptHibernateBom
+displayName: Adopt Hibernate ORM BOM
+description: Manage ORM versions using the ORM-only BOM.
+recipeList:
+  - org.hibernate.migration.recipes.platform.AdoptHibernateBom:
+      targetVersion: 8.0.0.CR1
+----
+
+Activate `com.example.AdoptHibernateBom` instead of the default recipe.
+
+== Maven
+
+The recipe imports the BOM in the applicable project/profile
+`dependencyManagement`, before other BOM imports. Existing imports retain their
+relative order. Eligible ordinary ORM dependencies omit their explicit versions.
+The BOM's published metadata is checked before any versions are removed.
+
+[source,xml]
+----
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-bom</artifactId>
+            <version>8.0.0.CR1</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <!-- existing application BOM imports remain here -->
+    </dependencies>
+</dependencyManagement>
+----
+
+A project-level `hibernate-platform` declaration leaves the project and its
+profiles unchanged. A profile-level declaration protects that profile.
+An existing target-version `hibernate-bom` import is reused when its precedence
+is established; conflicting versions, duplicates, or ambiguous management are
+reported without changing the affected scope.
+
+Direct dependency-management entries are preserved. If their versions conflict
+with the target, affected dependencies retain their explicit versions and receive
+a diagnostic. POMs with a parent are skipped and reported because inherited
+management cannot be established by this workflow.
+
+== Gradle and version catalogs
+
+The recipe adds an ordinary platform dependency to eligible configurations:
+
+[source,kotlin]
+----
+dependencies {
+    implementation(platform("org.hibernate.orm:hibernate-bom:8.0.0.CR1"))
+    implementation("org.hibernate.orm:hibernate-core")
+    implementation(platform("com.example:application-platform:1.0"))
+}
+----
+
+Groovy and Kotlin scripts, supported named/map declarations, and local version
+catalogs are supported. Known Java resolution classpaths and published API/runtime variants are considered
+when reusing or protecting existing Hibernate management. Custom `extendsFrom` wiring
+and unsupported scopes are reported conservatively.
+
+Scopes already using `hibernate-platform` remain unchanged. Existing target-version
+`hibernate-bom` declarations are reused, including `enforcedPlatform` when already
+present. The recipe never introduces `enforcedPlatform`.
+
+Catalog versions are removed only when all consumers have verified coverage and
+the supplied settings/build files establish that the consumer set is complete.
+Unrelated aliases and shared version keys remain intact.
+
+Gradle's normal conflict resolution still applies. Other constraints can select
+an ORM version different from the requested target. This recipe adds no
+third-party constraints, but changed ORM dependencies can change transitive
+resolution; review the resolved graph after migration.
+
+== Limits and diagnostics
+
+Plugins, annotation processors, tooling declarations, constraints, classified
+artifacts, and custom dependency types retain explicit versions. Unsupported or
+unresolved identities and versions are not guessed. Failed BOM metadata resolution
+leaves the affected input unchanged and reports the missing verification.
+
+Review `ORM_PLATFORM_MANAGEMENT_UNVERIFIED` rows in the
+link:../../README.adoc#_reviewing_skipped_migrations[Skipped Hibernate migrations]
+table. Messages identify the BOM and blocking condition. Independent safe scopes
+may migrate while blocked scopes remain unchanged. Repeating successful adoption
+makes no further changes or new diagnostics.
+
+For management of Hibernate's broader dependency stack, see
+link:adopt-hibernate-platform.adoc[Adopt Hibernate Platform]. Choose the management
+policy explicitly; this recipe does not switch one Hibernate BOM into the other.

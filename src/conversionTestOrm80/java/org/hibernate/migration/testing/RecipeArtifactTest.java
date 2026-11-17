@@ -55,7 +55,7 @@ class RecipeArtifactTest {
                 assertEquals(name, environment.activateRecipes(name).getName());
                 assertEquals(path.toUri().toURL(), loader.loadClass(name).getProtectionDomain().getCodeSource().getLocation());
             }
-            for (String simple : List.of("AdoptHibernatePlatform")) {
+            for (String simple : List.of("AdoptHibernatePlatform", "AdoptHibernateBom")) {
                 String name = "org.hibernate.migration.recipes.platform." + simple;
                 assertTrue(names.contains(name), names.toString());
                 assertEquals(name, environment.activateRecipes(name).getName());
@@ -106,6 +106,7 @@ class RecipeArtifactTest {
                 }
                 assertFalse(selected.contains("org.hibernate.migration.recipes.temporal.MigrateTemporalAnnotation"));
                 assertFalse(selected.contains("org.hibernate.migration.recipes.platform.AdoptHibernatePlatform"));
+                assertFalse(selected.contains("org.hibernate.migration.recipes.platform.AdoptHibernateBom"));
                 assertFalse(names.contains(name + "-minimal"));
                 List<Recipe> coordinates = tree.stream().filter(recipe -> recipe.getName().equals(
                         "org.hibernate.migration.recipes.orm80.MigrateOrmCoordinates")).toList();
