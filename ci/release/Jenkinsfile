@@ -3,11 +3,9 @@
 
 import org.hibernate.jenkins.pipeline.helpers.version.Version
 
-// Releases are explicit operator actions, never a consequence of branch indexing or a push.
-if (!currentBuild.getBuildCauses().toString().contains('UserIdCause')) {
-    currentBuild.result = 'NOT_BUILT'
-    return
-}
+// Always enter the declarative pipeline so Jenkins can register Build with Parameters.
+// Release work remains restricted to explicit operator actions.
+def manualRelease = currentBuild.getBuildCauses().toString().contains('UserIdCause')
 
 def withReleaseSSH(Closure action) {
     configFileProvider([
@@ -20,15 +18,12 @@ def withReleaseSSH(Closure action) {
 }
 
 pipeline {
-    agent { label 'Release' }
-    tools { jdk 'OpenJDK 25 Latest' }
+    agent none
     options {
         skipDefaultCheckout()
         disableConcurrentBuilds(abortPrevious: false)
-        lock(resource: 'hibernate-migration-recipes-release')
         buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '10'))
         timestamps()
-        timeout(time: 90, unit: 'MINUTES')
     }
     parameters {
         string(name: 'RELEASE_VERSION', defaultValue: '', trim: true,
@@ -43,60 +38,82 @@ pipeline {
         DISABLE_REMOTE_GRADLE_CACHE = 'true'
     }
     stages {
-        stage('Validate') {
+        stage('Initialize') {
             steps {
-                deleteDir()
-                checkout scm
                 script {
-                    def branch = env.BRANCH_NAME ?: ''
-                    if (branch != 'main' && !(branch ==~ /(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)/)) {
-                        error('Release jobs must select main or a MAJOR.MINOR maintenance branch.')
-                    }
-                    if (!params.RELEASE_VERSION || !params.DEVELOPMENT_VERSION) {
-                        error('RELEASE_VERSION and DEVELOPMENT_VERSION must both be set explicitly.')
-                    }
-                    env.RELEASE_BRANCH = branch
-                    env.RELEASE_VERSION = Version.parseReleaseVersion(
-                            params.RELEASE_VERSION, Version.Scheme.JBOSS_NO_FINAL).toString()
-                    env.DEVELOPMENT_VERSION = Version.parseDevelopmentVersion(params.DEVELOPMENT_VERSION).toString()
-                    env.JRELEASER_DRY_RUN = params.RELEASE_DRY_RUN.toString()
-                    dir('.release/scripts') {
-                        checkout scmGit(branches: [[name: '*/main']], extensions: [],
-                                userRemoteConfigs: [[credentialsId: 'ed25519.Hibernate-CI.github.com',
-                                        url: 'https://github.com/hibernate/hibernate-release-scripts.git']])
+                    if (!manualRelease) {
+                        currentBuild.result = 'NOT_BUILT'
+                        echo 'Release parameters registered; release work skipped for a non-manual trigger.'
                     }
                 }
             }
         }
-        stage('Prepare') {
-            steps {
-                withReleaseSSH {
-                    sh '''#!/usr/bin/env bash
+        stage('Release') {
+            when {
+                beforeOptions true
+                expression { manualRelease }
+            }
+            agent { label 'Release' }
+            tools { jdk 'OpenJDK 25 Latest' }
+            options {
+                lock(resource: 'hibernate-migration-recipes-release')
+                timeout(time: 90, unit: 'MINUTES')
+            }
+            stages {
+                stage('Validate') {
+                    steps {
+                        deleteDir()
+                        checkout scm
+                        script {
+                            def branch = env.BRANCH_NAME ?: ''
+                            if (branch != 'main' && !(branch ==~ /(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)/)) {
+                                error('Release jobs must select main or a MAJOR.MINOR maintenance branch.')
+                            }
+                            if (!params.RELEASE_VERSION || !params.DEVELOPMENT_VERSION) {
+                                error('RELEASE_VERSION and DEVELOPMENT_VERSION must both be set explicitly.')
+                            }
+                            env.RELEASE_BRANCH = branch
+                            env.RELEASE_VERSION = Version.parseReleaseVersion(
+                                    params.RELEASE_VERSION, Version.Scheme.JBOSS_NO_FINAL).toString()
+                            env.DEVELOPMENT_VERSION = Version.parseDevelopmentVersion(params.DEVELOPMENT_VERSION).toString()
+                            env.JRELEASER_DRY_RUN = params.RELEASE_DRY_RUN.toString()
+                            dir('.release/scripts') {
+                                checkout scmGit(branches: [[name: '*/main']], extensions: [],
+                                        userRemoteConfigs: [[credentialsId: 'ed25519.Hibernate-CI.github.com',
+                                                url: 'https://github.com/hibernate/hibernate-release-scripts.git']])
+                            }
+                        }
+                    }
+                }
+                stage('Prepare') {
+                    steps {
+                        withReleaseSSH {
+                            sh '''#!/usr/bin/env bash
 set -euo pipefail
 options=()
 if test "$JRELEASER_DRY_RUN" = true; then options+=(-d); fi
 .release/scripts/prepare-release.sh -j "${options[@]}" -b "$RELEASE_BRANCH" \
     -v "$DEVELOPMENT_VERSION" "$PROJECT" "$RELEASE_VERSION"
 '''
+                        }
+                    }
                 }
-            }
-        }
-        stage('Verify') {
-            steps {
-                sh './gradlew conversionTestOrm80 --daemon --stacktrace'
-                sh './gradlew build --daemon --stacktrace -x conversionTestOrm80'
-            }
-        }
-        stage('Publish') {
-            steps {
-                withCredentials([
-                        usernamePassword(credentialsId: 'central.sonatype.com',
-                                usernameVariable: 'JRELEASER_MAVENCENTRAL_USERNAME', passwordVariable: 'JRELEASER_MAVENCENTRAL_TOKEN'),
-                        file(credentialsId: 'release.gpg.private-key', variable: 'RELEASE_GPG_PRIVATE_KEY_PATH'),
-                        string(credentialsId: 'release.gpg.passphrase', variable: 'JRELEASER_GPG_PASSPHRASE'),
-                        string(credentialsId: 'Hibernate-CI.github.com', variable: 'JRELEASER_GITHUB_TOKEN')]) {
-                    withReleaseSSH {
-                        sh '''#!/usr/bin/env bash
+                stage('Verify') {
+                    steps {
+                        sh './gradlew conversionTestOrm80 --daemon --stacktrace'
+                        sh './gradlew build --daemon --stacktrace -x conversionTestOrm80'
+                    }
+                }
+                stage('Publish') {
+                    steps {
+                        withCredentials([
+                                usernamePassword(credentialsId: 'central.sonatype.com',
+                                        usernameVariable: 'JRELEASER_MAVENCENTRAL_USERNAME', passwordVariable: 'JRELEASER_MAVENCENTRAL_TOKEN'),
+                                file(credentialsId: 'release.gpg.private-key', variable: 'RELEASE_GPG_PRIVATE_KEY_PATH'),
+                                string(credentialsId: 'release.gpg.passphrase', variable: 'JRELEASER_GPG_PASSPHRASE'),
+                                string(credentialsId: 'Hibernate-CI.github.com', variable: 'JRELEASER_GITHUB_TOKEN')]) {
+                            withReleaseSSH {
+                                sh '''#!/usr/bin/env bash
 set -euo pipefail
 options=()
 if test "$JRELEASER_DRY_RUN" = true; then options+=(-d); fi
@@ -105,24 +122,26 @@ printf 'Migration documentation: https://github.com/hibernate/hibernate-migratio
 .release/scripts/publish.sh -j "${options[@]}" --notes=.release/release-notes.md \
     "$PROJECT" "$RELEASE_VERSION" "$DEVELOPMENT_VERSION" "$RELEASE_BRANCH"
 '''
+                            }
+                        }
+                        script {
+                            currentBuild.description = "${env.RELEASE_BRANCH}: ${params.RELEASE_VERSION}${params.RELEASE_DRY_RUN ? ' (dry run)' : ''}"
+                            echo "${params.RELEASE_DRY_RUN ? 'Dry run completed' : 'Released'} org.hibernate.migration:hibernate-migration-recipes:${params.RELEASE_VERSION}"
+                        }
                     }
                 }
-                script {
-                    currentBuild.description = "${env.RELEASE_BRANCH}: ${params.RELEASE_VERSION}${params.RELEASE_DRY_RUN ? ' (dry run)' : ''}"
-                    echo "${params.RELEASE_DRY_RUN ? 'Dry run completed' : 'Released'} org.hibernate.migration:hibernate-migration-recipes:${params.RELEASE_VERSION}"
-                }
             }
-        }
-    }
-    post {
-        always {
-            junit testResults: 'build/test-results/**/*.xml,buildSrc/build/test-results/**/*.xml', allowEmptyResults: true
-            archiveArtifacts artifacts: 'build/reports/tests/**/*,buildSrc/build/reports/tests/**/*', allowEmptyArchive: true
-        }
-        success {
-            script {
-                if (!params.RELEASE_DRY_RUN) {
-                    echo "GitHub release: https://github.com/hibernate/hibernate-migration-recipes/releases/tag/${params.RELEASE_VERSION}"
+            post {
+                always {
+                    junit testResults: 'build/test-results/**/*.xml,buildSrc/build/test-results/**/*.xml', allowEmptyResults: true
+                    archiveArtifacts artifacts: 'build/reports/tests/**/*,buildSrc/build/reports/tests/**/*', allowEmptyArchive: true
+                }
+                success {
+                    script {
+                        if (!params.RELEASE_DRY_RUN) {
+                            echo "GitHub release: https://github.com/hibernate/hibernate-migration-recipes/releases/tag/${params.RELEASE_VERSION}"
+                        }
+                    }
                 }
             }
         }
