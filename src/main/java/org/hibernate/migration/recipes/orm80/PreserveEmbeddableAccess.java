@@ -28,8 +28,8 @@ public class PreserveEmbeddableAccess extends ScanningRecipe<EmbeddableAccessPla
     @Override public TreeVisitor<?, ExecutionContext> getScanner(EmbeddableAccessPlanner analysis) {
         return new TreeVisitor<Tree, ExecutionContext>() {
             @Override public Tree preVisit(Tree tree, ExecutionContext ctx) {
-                if (tree instanceof J.CompilationUnit cu) analysis.sources.add(cu);
-                else if (tree instanceof Xml.Document document) analysis.xml.add(document);
+                if (tree instanceof J.CompilationUnit cu) analysis.scan(cu);
+                else if (tree instanceof Xml.Document document) analysis.scan(document);
                 else if (tree instanceof SourceFile source && (source.getSourcePath().toString().endsWith("orm.xml")
                         || source.getSourcePath().toString().endsWith("persistence.xml") || source.getSourcePath().toString().endsWith(".hbm.xml"))) analysis.globalXml = true;
                 stopAfterPreVisit();
@@ -44,12 +44,12 @@ public class PreserveEmbeddableAccess extends ScanningRecipe<EmbeddableAccessPla
             @Override public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext ctx) {
                 SourcePositions positions = null;
                 for (var diagnostic : analysis.diagnostics.values()) {
-                    if (!diagnostic.member().source().getId().equals(cu.getId())) continue;
+                    if (!diagnostic.member().sourceId().equals(cu.getId())) continue;
                     String key = getName() + ":embeddable-access:" + diagnostic.key();
                     Set<String> reported = getCursor().getRoot().computeMessageIfAbsent(key, k -> new HashSet<>());
                     if (!reported.add(diagnostic.code())) continue;
                     if (positions == null) positions = SourcePositions.capture(cu);
-                    String[] location = positions.location(diagnostic.member().tree().getId()).split(":");
+                    String[] location = positions.location(diagnostic.member().treeId()).split(":");
                     skipped.insertRow(ctx, new SkippedMigrations.Row(getName(), cu.getSourcePath().toString().replace('\\', '/'),
                             Integer.parseInt(location[0]), Integer.parseInt(location[1]), diagnostic.subject(),
                             "EMBEDDABLE_ACCESS_" + diagnostic.code(), diagnostic.message()));

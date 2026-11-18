@@ -357,7 +357,7 @@ final class TemporalConversionPlanner {
                     }
                     if (expression instanceof J.MethodInvocation && use instanceof J.Block) return;
                     c.reject("UNSUPPORTED_TEMPORAL_USAGE", "Unsupported property consumer at " + cu.getSourcePath() + ":" + state.positions.get(cu.getId()).location(expression.getId())
-                            + ": " + expression.printTrimmed(getCursor()) + "; the entire property is unchanged.");
+                            + ": " + expression.printTrimmed(getCursor().getParentOrThrow()) + "; the entire property is unchanged.");
                 }
                 @Override public J.Annotation visitAnnotation(J.Annotation a, ExecutionContext p) {
                     Candidate c = state.annotations.get(a.getId());

@@ -12,35 +12,85 @@ import org.openrewrite.xml.tree.Xml;
 /// @author Steve Ebersole
 final class EmbeddableAccessPlanner {
     enum Access { FIELD, PROPERTY, UNKNOWN }
-    final List<J.CompilationUnit> sources = new ArrayList<>();
-    final List<Xml.Document> xml = new ArrayList<>();
     final Map<UUID, Access> edits = new HashMap<>();
     final Map<String, Diagnostic> diagnostics = new TreeMap<>();
     private final Map<String, Model> models = new TreeMap<>();
     private final Set<String> xmlClasses = new HashSet<>();
+    private final Set<String> xmlPaths = new HashSet<>();
+    private final List<String> mappingFileReferences = new ArrayList<>();
     private final Map<String, Access> proposed = new TreeMap<>();
     boolean globalXml;
     private boolean globalCustom;
     private boolean planned;
 
-    record Member(Model owner, J tree, J.CompilationUnit source, String name, JavaType type,
-                  Access side, List<J.Annotation> annotations, boolean excluded) {
-        boolean has(String name) { return annotation(annotations, name) != null; }
-        Access override() { return access(annotations); }
+    private record Annotations(Set<String> types, Access access, boolean unsupported,
+                               boolean unsupportedExceptConvert, Map<String, String> classValues) {
+        static Annotations of(List<J.Annotation> annotations) {
+            Set<String> types = new HashSet<>();
+            for (var a : annotations) {
+                String name = typeName(a.getType());
+                if (name != null) types.add(name);
+            }
+            Map<String, String> classValues = new HashMap<>();
+            putClassValue(classValues, annotations, "MapKeyClass", "value");
+            putClassValue(classValues, annotations, "ElementCollection", "targetClass");
+            boolean unsupportedExceptConvert = annotations.stream()
+                    .filter(a -> !TypeUtils.isOfClassType(a.getType(), "jakarta.persistence.Convert"))
+                    .anyMatch(a -> EmbeddableAccessPlanner.unsupported(List.of(a)));
+            return new Annotations(types, EmbeddableAccessPlanner.access(annotations), EmbeddableAccessPlanner.unsupported(annotations),
+                    unsupportedExceptConvert, classValues);
+        }
+        private static void putClassValue(Map<String, String> classValues, List<J.Annotation> annotations, String annotation, String argument) {
+            Expression explicit = value(annotation(annotations, annotation), argument);
+            String name = explicit instanceof J.FieldAccess field && field.getSimpleName().equals("class") ? typeName(field.getTarget().getType()) : null;
+            if (name != null) classValues.put(annotation, name);
+        }
+        boolean has(String simple) { return types.contains("jakarta.persistence." + simple); }
+    }
+    record Member(Model owner, UUID treeId, UUID sourceId, String name, String declaredName, JavaType type,
+                  Access side, Annotations annotations, boolean excluded) {
+        boolean has(String name) { return annotations.has(name); }
+        Access override() { return annotations.access(); }
         boolean id() { return has("Id") || has("EmbeddedId"); }
     }
     private static final class Model {
-        final J.ClassDeclaration tree;
-        final J.CompilationUnit source;
+        final UUID id;
         final String name;
+        final String simpleName;
+        final String packageName;
+        final boolean plainClass;
+        final String superclass;
+        final Annotations annotations;
         final List<Member> members = new ArrayList<>();
         Model parent;
         boolean missingParent;
-        Model(J.ClassDeclaration tree, J.CompilationUnit source) {
-            this.tree = tree; this.source = source; this.name = tree.getType().getFullyQualifiedName();
+        Model(J.ClassDeclaration tree, UUID sourceId) {
+            JavaType.FullyQualified type = tree.getType();
+            this.id = tree.getId();
+            this.name = type.getFullyQualifiedName();
+            this.simpleName = tree.getSimpleName();
+            this.packageName = type.getPackageName();
+            this.plainClass = tree.getKind() == J.ClassDeclaration.Kind.Type.Class;
+            JavaType.FullyQualified supertype = type.getSupertype();
+            this.superclass = supertype == null || supertype.getFullyQualifiedName().equals("java.lang.Object") ? null : supertype.getFullyQualifiedName();
+            this.annotations = Annotations.of(tree.getAllAnnotations());
+            for (Statement statement : tree.getBody().getStatements()) {
+                if (statement instanceof J.VariableDeclarations fields) {
+                    Annotations fieldAnnotations = Annotations.of(fields.getAllAnnotations());
+                    boolean excluded = fields.hasModifier(J.Modifier.Type.Static) || fields.hasModifier(J.Modifier.Type.Transient);
+                    for (var variable : fields.getVariables()) members.add(new Member(this, fields.getId(), sourceId,
+                            variable.getSimpleName(), variable.getSimpleName(), variable.getType(), Access.FIELD, fieldAnnotations, excluded));
+                }
+                else if (statement instanceof J.MethodDeclaration method && method.getMethodType() != null
+                        && method.getMethodType().getParameterTypes().isEmpty() && !method.hasModifier(J.Modifier.Type.Static)) {
+                    String property = propertyName(method.getSimpleName(), method.getMethodType().getReturnType());
+                    if (property != null) members.add(new Member(this, method.getId(), sourceId, property, method.getSimpleName(),
+                            method.getMethodType().getReturnType(), Access.PROPERTY, Annotations.of(method.getAllAnnotations()), false));
+                }
+            }
         }
-        boolean has(String name) { return annotation(tree.getAllAnnotations(), name) != null; }
-        Access explicit() { return access(tree.getAllAnnotations()); }
+        boolean has(String name) { return annotations.has(name); }
+        Access explicit() { return annotations.access(); }
         boolean entity() { return has("Entity"); }
         boolean embeddable() { return has("Embeddable"); }
     }
@@ -128,7 +178,7 @@ final class EmbeddableAccessPlanner {
             Access value = proposed.remove(type);
             if (!preserved(old, occurrences(false, proposed), type)) proposed.put(type, value);
         }
-        proposed.forEach((name, access) -> edits.put(models.get(name).tree.getId(), access));
+        proposed.forEach((name, access) -> edits.put(models.get(name).id, access));
         var finalTarget = occurrences(false, proposed);
         for (var o : old.values()) {
             var n = finalTarget.get(o.key);
@@ -158,10 +208,11 @@ final class EmbeddableAccessPlanner {
         diagnostics.putIfAbsent(o.key + ":" + reason, new Diagnostic(o.key, o.member, o.type + " at " + o.path, reason, message));
     }
 
-    private void index() {
-        for (var cu : sources) new JavaIsoVisitor<Void>() {
+    /// Retains only the facts planning needs, so no source tree outlives the scan.
+    void scan(J.CompilationUnit cu) {
+        new JavaIsoVisitor<Void>() {
             @Override public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration cd, Void unused) {
-                if (cd.getType() != null) models.put(cd.getType().getFullyQualifiedName(), new Model(cd, cu));
+                if (cd.getType() != null) models.put(cd.getType().getFullyQualifiedName(), new Model(cd, cu.getId()));
                 return super.visitClassDeclaration(cd, unused);
             }
             @Override public J.Annotation visitAnnotation(J.Annotation a, Void unused) {
@@ -171,24 +222,13 @@ final class EmbeddableAccessPlanner {
                 return super.visitAnnotation(a, unused);
             }
         }.visit(cu, null);
+    }
+
+    private void index() {
         for (Model model : models.values()) {
-            JavaType.FullyQualified parent = model.tree.getType().getSupertype();
-            if (parent != null && !parent.getFullyQualifiedName().equals("java.lang.Object")) {
-                model.parent = models.get(parent.getFullyQualifiedName());
+            if (model.superclass != null) {
+                model.parent = models.get(model.superclass);
                 model.missingParent = model.parent == null;
-            }
-            for (Statement statement : model.tree.getBody().getStatements()) {
-                if (statement instanceof J.VariableDeclarations fields) {
-                    for (var variable : fields.getVariables()) model.members.add(new Member(model, fields, model.source,
-                            variable.getSimpleName(), variable.getType(), Access.FIELD, fields.getAllAnnotations(),
-                            fields.hasModifier(J.Modifier.Type.Static) || fields.hasModifier(J.Modifier.Type.Transient)));
-                }
-                else if (statement instanceof J.MethodDeclaration method && method.getMethodType() != null
-                        && method.getMethodType().getParameterTypes().isEmpty() && !method.hasModifier(J.Modifier.Type.Static)) {
-                    String name = propertyName(method.getSimpleName(), method.getMethodType().getReturnType());
-                    if (name != null) model.members.add(new Member(model, method, model.source, name,
-                            method.getMethodType().getReturnType(), Access.PROPERTY, method.getAllAnnotations(), false));
-                }
             }
         }
     }
@@ -245,10 +285,10 @@ final class EmbeddableAccessPlanner {
                     if (code == null && embedded != null) code = inheritedProblem(embedded);
                     if (code == null && (globalXml || xmlDependent(target.name))) code = "XML_DEPENDENT";
                     if (code == null && embedded != null && stack.contains(embedded.name)) code = "UNRESOLVED";
-                    if (code == null && (globalCustom || unsupported(member.annotations) || embedded != null && unsupported(embedded) || embedded != null && shadowsQualifier(embedded))) code = "UNSUPPORTED";
+                    if (code == null && (globalCustom || member.annotations.unsupported() || embedded != null && unsupported(embedded) || embedded != null && shadowsQualifier(embedded))) code = "UNSUPPORTED";
                     String childPath = path + "." + member.name + target.role;
                     String key = root.name + ":" + childPath + ":" + declaring.name + ":" + member.side
-                            + ":" + (member.tree instanceof J.MethodDeclaration method ? method.getSimpleName() : member.name);
+                            + ":" + member.declaredName;
                     result.put(key, new Occurrence(key, childPath, member, target.name, next == null ? Access.UNKNOWN : next,
                             code, explanation(code, root, declaring, target, embedded, stack), ancestors));
                     if (embedded != null) {
@@ -302,7 +342,7 @@ final class EmbeddableAccessPlanner {
         for (Model c = root; c != null; c = c.parent) for (Member m : c.members) if ((c.entity() || c.has("MappedSuperclass")) && m.id()) {
             Access classAccess = c.explicit() == null ? hierarchy : c.explicit();
             values.add(m.override() == null ? classAccess : m.override());
-            if (unsupported(m.annotations)) return Access.UNKNOWN;
+            if (m.annotations.unsupported()) return Access.UNKNOWN;
         }
         return values.size() == 1 ? values.iterator().next() : Access.UNKNOWN;
     }
@@ -313,25 +353,24 @@ final class EmbeddableAccessPlanner {
             boolean map = TypeUtils.isAssignableTo("java.util.Map", m.type);
             List<JavaType> args = m.type instanceof JavaType.Parameterized p ? p.getTypeParameters() : List.of();
             if (map && !m.has("MapKey")) addTarget(result, m, args.size() == 2 ? args.get(0) : null,
-                    "MapKeyClass", "value", "[key]", true, true, true);
+                    "MapKeyClass", "[key]", true, true, true);
             if (m.has("ElementCollection")) addTarget(result, m, args.size() == (map ? 2 : 1) ? args.get(map ? 1 : 0) : null,
-                    "ElementCollection", "targetClass", map ? "[value]" : "[element]", true, false, true);
+                    "ElementCollection", map ? "[value]" : "[element]", true, false, true);
         }
         else {
             var fq = TypeUtils.asFullyQualified(m.type);
             Model target = fq == null ? null : models.get(fq.getFullyQualifiedName());
             if (m.has("Embedded") || m.has("EmbeddedId") || target != null && target.embeddable() || fq != null && fq.getAnnotations().stream().anyMatch(a -> a.getFullyQualifiedName().equals("jakarta.persistence.Embeddable"))) {
-                addTarget(result, m, m.type, "", "", "", false, false, false);
+                addTarget(result, m, m.type, "", "", false, false, false);
             }
         }
         return result;
     }
 
-    private void addTarget(List<Target> result, Member member, JavaType generic, String annotation, String argument,
+    private void addTarget(List<Target> result, Member member, JavaType generic, String annotation,
                            String role, boolean plural, boolean key, boolean requireEmbeddable) {
         String concrete = typeName(generic);
-        Expression explicit = value(annotation(member.annotations, annotation), argument);
-        String explicitName = explicit instanceof J.FieldAccess field && field.getSimpleName().equals("class") ? typeName(field.getTarget().getType()) : null;
+        String explicitName = member.annotations.classValues().get(annotation);
         boolean conflict = explicitName != null && concrete != null && !concrete.equals(explicitName);
         String name = explicitName == null ? concrete : explicitName;
         if (name == null) {
@@ -355,15 +394,13 @@ final class EmbeddableAccessPlanner {
     }
 
     private boolean shadowsQualifier(Model m) {
-        return models.values().stream().anyMatch(other -> other.tree.getSimpleName().equals("jakarta")
-                && other.tree.getType().getPackageName().equals(m.tree.getType().getPackageName()));
+        return models.values().stream().anyMatch(other -> other.simpleName.equals("jakarta")
+                && other.packageName.equals(m.packageName));
     }
 
     private static boolean unsupported(Model m) {
-        return m.tree.getKind() != J.ClassDeclaration.Kind.Type.Class || m.embeddable() && m.parent != null
-                || unsupported(m.tree.getAllAnnotations()) || m.members.stream().anyMatch(x -> x.annotations.stream()
-                .filter(a -> !TypeUtils.isOfClassType(a.getType(), "jakarta.persistence.Convert"))
-                .anyMatch(a -> unsupported(List.of(a))));
+        return !m.plainClass || m.embeddable() && m.parent != null
+                || m.annotations.unsupported() || m.members.stream().anyMatch(x -> x.annotations.unsupportedExceptConvert());
     }
     private static boolean unsupported(List<J.Annotation> annotations) {
         return annotations.stream().anyMatch(a -> {
@@ -405,28 +442,30 @@ final class EmbeddableAccessPlanner {
     private static String localName(Xml.Tag tag) {
         return tag.getName().substring(tag.getName().indexOf(':') + 1);
     }
+    void scan(Xml.Document document) {
+        xmlPaths.add(document.getSourcePath().toString().replace('\\', '/'));
+        Xml.Tag root = document.getRoot();
+        if (localName(root).equals("entity-mappings")) {
+            String pkg = root.getChildren().stream().filter(t -> localName(t).equals("package")).findFirst().flatMap(Xml.Tag::getValue).orElse("").trim();
+            if (root.getChildren().stream().anyMatch(t -> Set.of("persistence-unit-metadata", "access").contains(localName(t)))) globalXml = true;
+            for (var tag : root.getChildren()) if (Set.of("entity", "embeddable", "mapped-superclass").contains(localName(tag))) {
+                for (var a : tag.getAttributes()) if (a.getKeyAsString().equals("class")) {
+                    String name = a.getValueAsString();
+                    xmlClasses.add(name.contains(".") || pkg.isEmpty() ? name : pkg + "." + name);
+                }
+            }
+        }
+        else if (localName(root).equals("hibernate-mapping")) globalXml = true;
+        else if (localName(root).equals("persistence")) for (var unit : root.getChildren()) {
+            for (var child : unit.getChildren()) if (localName(child).equals("mapping-file")) {
+                mappingFileReferences.add(child.getValue().orElse("").trim());
+            }
+        }
+    }
+
     private void descriptors() {
-        Set<String> paths = new HashSet<>();
-        xml.forEach(d -> paths.add(d.getSourcePath().toString().replace('\\', '/')));
-        for (var document : xml) {
-            Xml.Tag root = document.getRoot();
-            if (localName(root).equals("entity-mappings")) {
-                String pkg = root.getChildren().stream().filter(t -> localName(t).equals("package")).findFirst().flatMap(Xml.Tag::getValue).orElse("").trim();
-                if (root.getChildren().stream().anyMatch(t -> Set.of("persistence-unit-metadata", "access").contains(localName(t)))) globalXml = true;
-                for (var tag : root.getChildren()) if (Set.of("entity", "embeddable", "mapped-superclass").contains(localName(tag))) {
-                    for (var a : tag.getAttributes()) if (a.getKeyAsString().equals("class")) {
-                        String name = a.getValueAsString();
-                        xmlClasses.add(name.contains(".") || pkg.isEmpty() ? name : pkg + "." + name);
-                    }
-                }
-            }
-            else if (localName(root).equals("hibernate-mapping")) globalXml = true;
-            else if (localName(root).equals("persistence")) for (var unit : root.getChildren()) {
-                for (var child : unit.getChildren()) if (localName(child).equals("mapping-file")) {
-                    String reference = child.getValue().orElse("").trim();
-                    if (reference.isEmpty() || paths.stream().noneMatch(p -> p.equals(reference) || p.endsWith("/" + reference))) globalXml = true;
-                }
-            }
+        for (String reference : mappingFileReferences) {
+            if (reference.isEmpty() || xmlPaths.stream().noneMatch(p -> p.equals(reference) || p.endsWith("/" + reference))) globalXml = true;
         }
     }
 }
