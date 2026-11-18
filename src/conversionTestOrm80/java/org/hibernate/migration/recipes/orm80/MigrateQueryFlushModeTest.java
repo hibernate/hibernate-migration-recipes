@@ -5,6 +5,12 @@ import org.hibernate.migration.testing.MigrationSources;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.openrewrite.config.CompositeRecipe;
+import org.openrewrite.java.ChangeAnnotationAttributeName;
+import org.openrewrite.java.ChangeType;
+import org.openrewrite.java.ReplaceConstantWithAnotherConstant;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -62,5 +68,22 @@ class MigrateQueryFlushModeTest {
         var sources = MigrationSources.configured().files(path);
         String source = sources.get(path);
         assertEquals(source, ApiValidation.run(ApiValidation.composite(RECIPE), sources, "orm74").text());
+    }
+
+    @Test
+    void keepsImportWhenPriorStepAlreadyMigratedConstant() {
+        String path = "fixture/queryflush/premigrated/Book.java";
+        var sources = MigrationSources.configured().files(path);
+        var recipe = new CompositeRecipe(List.of(
+                new ReplaceConstantWithAnotherConstant(
+                        "org.hibernate.annotations.FlushModeType.MANUAL",
+                        "jakarta.persistence.QueryFlushMode.NO_FLUSH"),
+                new ChangeType("org.hibernate.annotations.FlushModeType", "jakarta.persistence.QueryFlushMode", true),
+                new ChangeAnnotationAttributeName("org.hibernate.annotations.NamedQuery", "flushMode", "flush"),
+                ApiValidation.composite(RECIPE)));
+        var result = ApiValidation.run(recipe, sources, "orm74");
+        assertTrue(result.text().contains("import jakarta.persistence.QueryFlushMode;"), result.text());
+        assertTrue(result.text().contains("flush = QueryFlushMode.NO_FLUSH)"), result.text());
+        assertTrue(result.text().contains("QueryFlushMode fallback = QueryFlushMode.FLUSH;"), result.text());
     }
 }

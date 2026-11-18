@@ -35,6 +35,16 @@ public final class ChangeTypeSupport {
 		boolean[] conflict = {false};
 		new JavaIsoVisitor<boolean[]>() {
 			@Override
+			public J.@NonNull Import visitImport(J.@NonNull Import anImport, boolean @NonNull [] found) {
+				// Imports added by other recipes carry untyped identifiers, so judge them by their type name instead
+				if (TypeUtils.fullyQualifiedNamesAreEqual(oldType, anImport.getTypeName())
+						|| TypeUtils.fullyQualifiedNamesAreEqual(newType, anImport.getTypeName())) {
+					return anImport;
+				}
+				return super.visitImport(anImport, found);
+			}
+
+			@Override
 			public J.@NonNull Identifier visitIdentifier(J.@NonNull Identifier identifier, boolean @NonNull [] found) {
 				if (simpleName.equals(identifier.getSimpleName())
 						&& !TypeUtils.isOfClassType(identifier.getType(), oldType)
