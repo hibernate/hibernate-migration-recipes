@@ -94,6 +94,7 @@ dependencies {
     implementation("org.openrewrite:rewrite-toml")
     runtimeOnly("org.openrewrite:rewrite-java-17")
     runtimeOnly("org.openrewrite:rewrite-java-21")
+    runtimeOnly("org.openrewrite:rewrite-java-25")
     testImplementation("org.openrewrite:rewrite-test")
     testImplementation(platform("org.junit:junit-bom:$junitVersion"))
     testImplementation("org.junit.jupiter:junit-jupiter")
