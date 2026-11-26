@@ -126,7 +126,8 @@ public class MigrateFindMultipleOptions extends Recipe {
 									&& option.equals(access.getSimpleName())
 									&& access.getName().getFieldType() == null
 									&& TypeUtils.isOfClassType(access.getType(), newType)) {
-								maybeAddImport(newType);
+								// With a $ name, AddImport takes org.hibernate.* as covering the nested type.
+								if (!conflict) maybeAddImport(newType.replace('$', '.'));
 								maybeRemoveImport(OWNER);
 								return access.getName().withPrefix(access.getPrefix()).withType(access.getType());
 							}

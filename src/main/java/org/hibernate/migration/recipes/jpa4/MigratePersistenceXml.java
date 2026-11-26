@@ -46,7 +46,7 @@ public class MigratePersistenceXml extends Recipe {
                     }
                     String value = XmlText.text(child);
                     String token = value == null ? "" : value.trim();
-                    if (!token.contains("package-info") && !child.print(new Cursor(getCursor(), child)).contains("package-info")) {
+                    if (!token.contains("package-info") && !child.print(getCursor()).contains("package-info")) {
                         kept.add(content);
                         continue;
                     }
